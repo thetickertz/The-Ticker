@@ -63,12 +63,17 @@ function safe(v) {
 // for Drive AND for embedding in the PDF (base64 cannot contain quotes,
 // so a validated URL is also safe inside an <img src="..."> attribute).
 function dataUrlParts(dataURL, imagesOnly) {
-  const m = /^data:(image\/(?:png|jpeg|jpg|webp)|application\/pdf);base64,([A-Za-z0-9+/=]+)$/
+  // padding '=' only at the very end (0-2), and a whole number of base64
+  // blocks, so a charset-valid but structurally broken string can never
+  // reach (and throw inside) Utilities.base64Decode
+  const m = /^data:(image\/(?:png|jpeg|jpg|webp)|application\/pdf);base64,([A-Za-z0-9+/]+={0,2})$/
     .exec(String(dataURL || ''));
   if (!m || m[0].length > MAX_DATAURL_CHARS) return null;
+  if (m[2].length % 4 !== 0) return null;
   if (imagesOnly && m[1] === 'application/pdf') return null;
   return { mime: m[1], b64: m[2] };
 }
+const FILE_EXT = { 'image/png': '.png', 'image/jpeg': '.jpg', 'image/jpg': '.jpg', 'image/webp': '.webp', 'application/pdf': '.pdf' };
 
 function doPost(e) {
   try {
@@ -81,32 +86,44 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
     delete p.secret;
-    // hourly brake before anything touches Drive, the Sheet or e-mail
+    // hourly brake before anything touches Drive, the Sheet or e-mail.
+    // Bucketed per clock-hour (a true per-hour cap that resets each hour,
+    // not a sliding total) and taken under a lock so a concurrent burst
+    // cannot all pass on the same stale read.
     const cache = CacheService.getScriptCache();
-    const hourly = Number(cache.get('cds:all') || 0);
-    if (hourly >= MAX_PER_HOUR)
-      return ContentService.createTextOutput(JSON.stringify({ ok: false,
-        error: 'The desk is receiving many applications right now - please try again in an hour.' }))
-        .setMimeType(ContentService.MimeType.JSON);
-    cache.put('cds:all', String(hourly + 1), 3600);
+    const brakeKey = 'cds:' + Utilities.formatDate(new Date(), 'Africa/Dar_es_Salaam', 'yyyyMMddHH');
+    const brakeLock = LockService.getScriptLock();
+    brakeLock.waitLock(20000);
+    try {
+      const hourly = Number(cache.get(brakeKey) || 0);
+      if (hourly >= MAX_PER_HOUR)
+        return ContentService.createTextOutput(JSON.stringify({ ok: false,
+          error: 'The desk is receiving many applications right now - please try again in an hour.' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      cache.put(brakeKey, String(hourly + 1), 4200);
+    } finally {
+      brakeLock.releaseLock();
+    }
     const ref = String(p.reference || 'NO-REF').replace(/[^\w-]/g, '').slice(0, 40);
 
     // 1 ── save attachments + signatures to a per-application Drive folder
     const root = DriveApp.getFolderById(FOLDER_ID);
     const folder = root.createFolder(ref + ' — ' + String(p.accountName || 'unnamed').slice(0, 80));
     const links = [];
-    const saveDataUrl = (dataURL, name) => {
-      const f = dataUrlParts(dataURL);
+    // the file extension comes from the VALIDATED mime, never from sniffing
+    // the caller's payload; signatures are image-only
+    const saveDataUrl = (dataURL, baseName, imagesOnly) => {
+      const f = dataUrlParts(dataURL, imagesOnly);
       if (!f) return;
+      const name = baseName + (FILE_EXT[f.mime] || '');
       const blob = Utilities.newBlob(Utilities.base64Decode(f.b64), f.mime, name);
       links.push(name + ': ' + folder.createFile(blob).getUrl());
     };
     Object.entries(p.attachments || {}).slice(0, MAX_ATTACHMENTS).forEach(([key, f]) => {
-      const ext = /pdf/.test((f.dataURL || '').slice(0, 30)) ? '.pdf' : '.jpg';
-      saveDataUrl(f.dataURL, key.slice(0, 60) + ext);
+      saveDataUrl(f.dataURL, key.slice(0, 60));
     });
     (p.mandate && p.mandate.signatories || []).slice(0, MAX_SIGNATORIES).forEach((s, i) => {
-      if (s.signature) saveDataUrl(s.signature, 'signature_' + String.fromCharCode(65 + i) + '.png');
+      if (s.signature) saveDataUrl(s.signature, 'signature_' + String.fromCharCode(65 + i), true);
     });
     // full JSON for the record / any future system import
     folder.createFile(ref + '.json', JSON.stringify(p, null, 2), 'application/json');

@@ -492,12 +492,23 @@ function handleBid(p) {
   if (!sess || !staffEmailOk(email) || !/^\d{1,5}$/.test(staffNo))
     return json({ ok: false, error: 'Session expired - please log in again' });
 
-  // flood brake: caps how fast bids can be poured into the register
-  const rcache = CacheService.getScriptCache();
-  const rMine = Number(rcache.get('bids:' + email) || 0);
-  if (rMine >= 60) return json({ ok: false, error: 'This account has entered many bids very quickly - wait a few minutes and try again.' });
-  const rAll = Number(rcache.get('bids:all') || 0);
-  if (rAll >= 600) return json({ ok: false, error: 'The system is receiving unusually many bids right now - try again in a few minutes.' });
+  const cache = CacheService.getScriptCache();
+  const subKey = /^[\w-]{8,64}$/.test(String(p.submitId || '')) ? 'sub:' + p.submitId : null;
+  // idempotency FIRST: a retry of a bid that already landed replays its
+  // original result, never blocked by (or charged to) the flood brake
+  if (subKey) { const prev = cache.get(subKey); if (prev) return json(JSON.parse(prev)); }
+
+  // flood brake, bucketed per clock-hour so it is a TRUE per-hour cap that
+  // resets each hour - not a sliding total that would lock out a busy but
+  // legitimate day. This pre-lock read is only a cheap fast-reject; the
+  // authoritative re-read and charge happen inside the lock below.
+  const hourTag = Utilities.formatDate(new Date(), TZ, 'yyyyMMddHH');
+  const mineKey = 'bids:' + email + ':' + hourTag, allKey = 'bids:all:' + hourTag;
+  const BID_CAP_MINE = 60, BID_CAP_ALL = 600;
+  if (Number(cache.get(mineKey) || 0) >= BID_CAP_MINE)
+    return json({ ok: false, error: 'This account has entered many bids this hour - wait a little and try again.' });
+  if (Number(cache.get(allKey) || 0) >= BID_CAP_ALL)
+    return json({ ok: false, error: 'The system is receiving unusually many bids right now - try again shortly.' });
 
   const a = activeAuction();
   if (!a) return json({ ok: false, error: 'No active auction' });
@@ -536,10 +547,14 @@ function handleBid(p) {
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
-    // idempotency: a retry of the same submission returns the original result
-    const cache = CacheService.getScriptCache();
-    const subKey = /^[\w-]{8,64}$/.test(String(p.submitId || '')) ? 'sub:' + p.submitId : null;
+    // re-check now that we hold the lock, so concurrent requests cannot each
+    // slip past on a stale pre-lock read (idempotency, then the true cap)
     if (subKey) { const prev = cache.get(subKey); if (prev) return json(JSON.parse(prev)); }
+    const nMine = Number(cache.get(mineKey) || 0), nAll = Number(cache.get(allKey) || 0);
+    if (nMine >= BID_CAP_MINE)
+      return json({ ok: false, error: 'This account has entered many bids this hour - wait a little and try again.' });
+    if (nAll >= BID_CAP_ALL)
+      return json({ ok: false, error: 'The system is receiving unusually many bids right now - try again shortly.' });
 
     // WAP cap across the client's earlier WAP bids in this auction
     if (a.maxWap > 0 && !isClean) {
@@ -567,13 +582,16 @@ function handleBid(p) {
       a.tenors.length ? safe(String(p.tenor)) + ' days' : safe(a.maturityPeriod),
       safe(subKey ? String(p.submitId) : ''),
     ]);
-    // only a bid that actually landed counts against the flood brake
-    rcache.put('bids:' + email, String(rMine + 1), 3600);
-    rcache.put('bids:all', String(rAll + 1), 3600);
-
     const result = { ok: true, ref: ref,
       at: Utilities.formatDate(now, TZ, 'yyyy-MM-dd HH:mm:ss') };
+    // memoize the result FIRST so any retry replays instead of re-appending,
+    // THEN charge the hour bucket (TTL just over an hour so it self-expires);
+    // a failed charge must never undo a bid that already landed
     if (subKey) cache.put(subKey, JSON.stringify(result), 21600); // 6h
+    try {
+      cache.put(mineKey, String(nMine + 1), 4200);
+      cache.put(allKey, String(nAll + 1), 4200);
+    } catch (e) {}
     return json(result);
   } finally {
     lock.releaseLock();
