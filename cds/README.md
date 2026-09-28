@@ -192,7 +192,13 @@ Validation is enforced twice (browser and server), with instant inline
 feedback as staff move between fields: securities account strictly
 `BOTCDSB026`/`BOTCDSCORU` + digits, amount ≥ minimum and in the configured
 multiples, price inside the band with ≤4 decimals, account to debit 10–13
-digits, client e-mail required, deadline respected.
+digits, client e-mail required, deadline respected. The staff number is
+sealed into the signed session token, so a bid can never carry a different
+number than the one signed in with, and flood brakes cap the entry rate
+(60 bids per account per hour, 600 system-wide) so the register cannot be
+drowned in junk. The CDS account-opening receiver has its own brakes: 10
+applications per hour in total, size and file-type checks on every upload,
+and formula-injection guarding on its register.
 
 ### Admin portal (`../bids/admin.html`)
 
