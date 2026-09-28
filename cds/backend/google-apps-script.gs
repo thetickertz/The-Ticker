@@ -33,6 +33,10 @@
  *     application is 1–4 MB. Execution limit is 6 minutes.
  *   • The endpoint is public. Set SHARED_SECRET to the same value as
  *     CONFIG.SHARED_SECRET in index.html to drop junk submissions.
+ *     Built-in abuse brakes regardless: max 10 applications/hour in
+ *     total, 12 files per application (~6.7 MB each, 30 MB overall),
+ *     only real image/PDF files are stored, and everything written to
+ *     the register is guarded against spreadsheet formula injection.
  */
 
 const SHEET_ID  = 'PASTE_SHEET_ID_HERE';
@@ -40,31 +44,68 @@ const FOLDER_ID = 'PASTE_DRIVE_FOLDER_ID_HERE';
 const NOTIFY    = 'brokerage@crdbbank.co.tz';   // desk inbox (comma-separate for several)
 const SHARED_SECRET = '';                        // '' disables the check
 
+// Abuse brakes: the endpoint is public, so cap what one hour can do to the
+// Drive, the register and the desk inbox, and accept only real files.
+const MAX_PER_HOUR = 10;        // applications accepted per hour, all callers
+const MAX_ATTACHMENTS = 12;     // files per application
+const MAX_SIGNATORIES = 10;
+const MAX_DATAURL_CHARS = 9e6;  // ~6.7 MB per file
+const MAX_BODY_CHARS = 30e6;    // whole submission
+
+// Sheets treats leading = + - @ as a formula: prefix with an apostrophe so
+// applicant-typed text can never execute when the register is opened.
+function safe(v) {
+  const s = String(v == null ? '' : v);
+  return /^[=+\-@]/.test(s) ? "'" + s : s;
+}
+
+// Only well-formed base64 data URLs of real document types are accepted -
+// for Drive AND for embedding in the PDF (base64 cannot contain quotes,
+// so a validated URL is also safe inside an <img src="..."> attribute).
+function dataUrlParts(dataURL, imagesOnly) {
+  const m = /^data:(image\/(?:png|jpeg|jpg|webp)|application\/pdf);base64,([A-Za-z0-9+/=]+)$/
+    .exec(String(dataURL || ''));
+  if (!m || m[0].length > MAX_DATAURL_CHARS) return null;
+  if (imagesOnly && m[1] === 'application/pdf') return null;
+  return { mime: m[1], b64: m[2] };
+}
+
 function doPost(e) {
   try {
+    if (((e.postData || {}).contents || '').length > MAX_BODY_CHARS)
+      return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'Submission too large' }))
+        .setMimeType(ContentService.MimeType.JSON);
     const p = JSON.parse(e.postData.contents);
     if (SHARED_SECRET && p.secret !== SHARED_SECRET) {
       return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'unauthorized' }))
         .setMimeType(ContentService.MimeType.JSON);
     }
     delete p.secret;
-    const ref = String(p.reference || 'NO-REF').replace(/[^\w-]/g, '');
+    // hourly brake before anything touches Drive, the Sheet or e-mail
+    const cache = CacheService.getScriptCache();
+    const hourly = Number(cache.get('cds:all') || 0);
+    if (hourly >= MAX_PER_HOUR)
+      return ContentService.createTextOutput(JSON.stringify({ ok: false,
+        error: 'The desk is receiving many applications right now - please try again in an hour.' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    cache.put('cds:all', String(hourly + 1), 3600);
+    const ref = String(p.reference || 'NO-REF').replace(/[^\w-]/g, '').slice(0, 40);
 
     // 1 ── save attachments + signatures to a per-application Drive folder
     const root = DriveApp.getFolderById(FOLDER_ID);
-    const folder = root.createFolder(ref + ' — ' + (p.accountName || 'unnamed'));
+    const folder = root.createFolder(ref + ' — ' + String(p.accountName || 'unnamed').slice(0, 80));
     const links = [];
     const saveDataUrl = (dataURL, name) => {
-      const m = /^data:(.+?);base64,(.*)$/.exec(dataURL || '');
-      if (!m) return;
-      const blob = Utilities.newBlob(Utilities.base64Decode(m[2]), m[1], name);
+      const f = dataUrlParts(dataURL);
+      if (!f) return;
+      const blob = Utilities.newBlob(Utilities.base64Decode(f.b64), f.mime, name);
       links.push(name + ': ' + folder.createFile(blob).getUrl());
     };
-    Object.entries(p.attachments || {}).forEach(([key, f]) => {
+    Object.entries(p.attachments || {}).slice(0, MAX_ATTACHMENTS).forEach(([key, f]) => {
       const ext = /pdf/.test((f.dataURL || '').slice(0, 30)) ? '.pdf' : '.jpg';
-      saveDataUrl(f.dataURL, key + ext);
+      saveDataUrl(f.dataURL, key.slice(0, 60) + ext);
     });
-    (p.mandate && p.mandate.signatories || []).forEach((s, i) => {
+    (p.mandate && p.mandate.signatories || []).slice(0, MAX_SIGNATORIES).forEach((s, i) => {
       if (s.signature) saveDataUrl(s.signature, 'signature_' + String.fromCharCode(65 + i) + '.png');
     });
     // full JSON for the record / any future system import
@@ -87,14 +128,14 @@ function doPost(e) {
     }
     const h0 = (p.holders && p.holders[0]) || {};
     sh.appendRow([
-      new Date(), ref, p.accountName || '', (p.accountType || '') + ' → ' + (p.formVariant || ''), p.category || '', p['class'] || '',
-      [h0.surname, h0.firstName, h0.middleName].filter(Boolean).join(' ') || (p.company && p.company.name) || '',
-      h0.nin || '', h0.tin || (p.company && p.company.tin) || '',
-      h0.mobile ? (h0.mobile.indexOf('+') === 0 ? h0.mobile : '+255' + h0.mobile) :(p.company && p.company.contact && p.company.contact.mobile) || '',
-      h0.email || (p.company && p.company.email) || '',
-      (p.bank && p.bank.bank) + ' · ' + (p.bank && p.bank.branch),
-      (p.bank && p.bank.accountNumber) || '', (p.mandate && p.mandate.rule) || '',
-      (p.declarations && p.declarations.sourceOfFunds) || '', p.existingCdsId || '',
+      new Date(), safe(ref), safe(p.accountName || ''), safe((p.accountType || '') + ' → ' + (p.formVariant || '')), safe(p.category || ''), safe(p['class'] || ''),
+      safe([h0.surname, h0.firstName, h0.middleName].filter(Boolean).join(' ') || (p.company && p.company.name) || ''),
+      safe(h0.nin || ''), safe(h0.tin || (p.company && p.company.tin) || ''),
+      safe(h0.mobile ? (h0.mobile.indexOf('+') === 0 ? h0.mobile : '+255' + h0.mobile) : (p.company && p.company.contact && p.company.contact.mobile) || ''),
+      safe(h0.email || (p.company && p.company.email) || ''),
+      safe((p.bank && p.bank.bank) + ' · ' + (p.bank && p.bank.branch)),
+      safe((p.bank && p.bank.accountNumber) || ''), safe((p.mandate && p.mandate.rule) || ''),
+      safe((p.declarations && p.declarations.sourceOfFunds) || ''), safe(p.existingCdsId || ''),
       folder.getUrl(), 'NEW',
     ]);
 
@@ -119,7 +160,8 @@ function doPost(e) {
     return ContentService.createTextOutput(JSON.stringify({ ok: true, reference: ref }))
       .setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err) }))
+    console.error(err);
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'Could not process the application - please try again or contact the desk.' }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 }
@@ -186,8 +228,8 @@ function pdfHtml(p, ref) {
     row('Branch telephone / e-mail', esc(join([b.tel, b.email]))) + '</table>' +
     '<h4>3. PERSONS AUTHORISED TO OPERATE THE CDS SECURITIES ACCOUNT</h4>' +
     '<table><tr><th style="width:6%">No.</th><th>Surname</th><th>First name</th><th>Middle name</th><th>Capacity</th><th>Specimen signature (provisional)</th></tr>' +
-    (m.signatories || []).map((s, i) => '<tr><td>' + String.fromCharCode(65 + i) + '</td><td>' + esc(s.surname) + '</td><td>' + esc(s.firstName) + '</td><td>' + esc(s.middleName) + '</td><td>' + esc(s.capacity) + '</td><td>' +
-      (s.signature ? '<img class="sig" src="' + s.signature + '">' : '') + '</td></tr>').join('') + '</table>' +
+    (m.signatories || []).slice(0, MAX_SIGNATORIES).map((s, i) => '<tr><td>' + String.fromCharCode(65 + i) + '</td><td>' + esc(s.surname) + '</td><td>' + esc(s.firstName) + '</td><td>' + esc(s.middleName) + '</td><td>' + esc(s.capacity) + '</td><td>' +
+      (dataUrlParts(s.signature, true) ? '<img class="sig" src="' + s.signature + '">' : '') + '</td></tr>').join('') + '</table>' +
     '<table>' + row('Operating mandate', esc(RULES[m.rule] || m.rule)) + '</table>' +
     '<h4>4. CATEGORY OF THE CDS SECURITIES ACCOUNT HOLDER</h4>' +
     '<table>' + row('Category', esc(p.category)) + row('Class', esc(p['class'])) + '</table>' +
@@ -201,10 +243,10 @@ function pdfHtml(p, ref) {
     '<tr><th>CDP CDS ID</th><td></td><th>CDP CDS SEC. A/C</th><td></td></tr>' +
     '<tr><th>CDS account No. allocated</th><td></td><th>Remarks</th><td></td></tr></table></div>' +
     '<h4>ATTACHED DOCUMENTS</h4>';
-  Object.keys(p.attachments || {}).forEach(k => {
+  Object.keys(p.attachments || {}).slice(0, MAX_ATTACHMENTS).forEach(k => {
     const f = p.attachments[k];
     html += '<p><b>' + esc(k) + '</b> - ' + esc(f.name) + '<br>' +
-      ((f.dataURL || '').indexOf('data:image') === 0 ? '<img class="doc" src="' + f.dataURL + '">' : '(PDF saved as a separate file in this folder)') + '</p>';
+      (dataUrlParts(f.dataURL, true) ? '<img class="doc" src="' + f.dataURL + '">' : '(PDF saved as a separate file in this folder)') + '</p>';
   });
   return html;
 }

@@ -379,10 +379,12 @@ function handleLogin(p) {
   }
 
   // ── Staff portal: NO staff register (staff are many). A company e-mail
-  //    plus a staff number is enough; every bid still records both. ──
+  //    plus a staff number is enough; every bid still records both. The
+  //    staff number is SEALED INTO the signed token so a bid can never be
+  //    submitted under a different number than the one signed in with. ──
   const staffNo = String(p.staffNo || '').trim();
   if (!/^\d{1,5}$/.test(staffNo)) return json({ ok: false, error: 'Staff number is digits only, up to 5' });
-  return json({ ok: true, token: makeToken(email, 'staff'), name: nameFromEmail(email),
+  return json({ ok: true, token: makeToken(email + '|' + staffNo, 'staff'), name: nameFromEmail(email),
     branch: '', staffNo: staffNo, admin: false });
 }
 
@@ -482,10 +484,20 @@ function handleAdminSetPassword(p) {
 }
 
 function handleBid(p) {
-  const email = checkToken(p.token, 'staff');
-  if (!email) return json({ ok: false, error: 'Session expired - please log in again' });
-  const staffNo = String(p.staffNo || '').trim();
-  if (!/^\d{1,5}$/.test(staffNo)) return json({ ok: false, error: 'Session data missing - please log in again' });
+  // staff tokens carry 'email|staffNo': identity AND staff number are both
+  // signed, so neither can be swapped in the request body
+  const sess = checkToken(p.token, 'staff');
+  const sp = String(sess || '').split('|');
+  const email = sp[0] || '', staffNo = String(sp[1] || '').trim();
+  if (!sess || !staffEmailOk(email) || !/^\d{1,5}$/.test(staffNo))
+    return json({ ok: false, error: 'Session expired - please log in again' });
+
+  // flood brake: caps how fast bids can be poured into the register
+  const rcache = CacheService.getScriptCache();
+  const rMine = Number(rcache.get('bids:' + email) || 0);
+  if (rMine >= 60) return json({ ok: false, error: 'This account has entered many bids very quickly - wait a few minutes and try again.' });
+  const rAll = Number(rcache.get('bids:all') || 0);
+  if (rAll >= 600) return json({ ok: false, error: 'The system is receiving unusually many bids right now - try again in a few minutes.' });
 
   const a = activeAuction();
   if (!a) return json({ ok: false, error: 'No active auction' });
@@ -553,8 +565,11 @@ function handleBid(p) {
       safe(String(p.accountToDebit)), safe(String(p.branch).trim()),
       safe(String(p.responsible).trim()), safe(clientEmail),
       a.tenors.length ? safe(String(p.tenor)) + ' days' : safe(a.maturityPeriod),
-      String(p.submitId || ''),
+      safe(subKey ? String(p.submitId) : ''),
     ]);
+    // only a bid that actually landed counts against the flood brake
+    rcache.put('bids:' + email, String(rMine + 1), 3600);
+    rcache.put('bids:all', String(rAll + 1), 3600);
 
     const result = { ok: true, ref: ref,
       at: Utilities.formatDate(now, TZ, 'yyyy-MM-dd HH:mm:ss') };
