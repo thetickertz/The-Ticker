@@ -556,12 +556,32 @@ function handleBid(p) {
     if (nAll >= BID_CAP_ALL)
       return json({ ok: false, error: 'The system is receiving unusually many bids right now - try again shortly.' });
 
+    // this client's bids already recorded in this auction (used for both the
+    // duplicate check and the WAP cap); read once under the lock
+    const clientBids = sheetRows('Bids', BID_COLS)
+      .filter(r => String(r.AuctionNo) === a.auctionNo &&
+        String(r.SecuritiesAccountNumber).trim().toUpperCase() === acct);
+
+    // reject an EXACT duplicate: the same client already has a bid at the
+    // same face value and the same price in this auction - whoever entered
+    // the first one. (Price = clean-price value for a clean bid; for a WAP
+    // bid there is no chosen price, so same client + same face value + WAP
+    // counts as the same bid.) A genuine same-submission retry never reaches
+    // here - it replayed from the idempotency cache above.
+    const dup = clientBids.find(r =>
+      Number(r.FaceValueTZS) === amt &&
+      String(r.PriceType) === String(p.priceType) &&
+      (!isClean || Math.round(Number(r.CleanPricePer100) * 10000) === Math.round(Number(p.cleanPrice) * 10000)));
+    if (dup)
+      return json({ ok: false, duplicate: true,
+        error: 'Duplicate bid: client ' + acct + ' already has a bid of TZS ' + amt.toLocaleString() +
+          (isClean ? ' at clean price ' + Number(p.cleanPrice) : ' (WAP)') +
+          ' in auction ' + a.auctionNo + '. The same bid cannot be entered twice.' });
+
     // WAP cap across the client's earlier WAP bids in this auction
     if (a.maxWap > 0 && !isClean) {
-      const prior = sheetRows('Bids', BID_COLS)
-        .filter(r => String(r.AuctionNo) === a.auctionNo &&
-          String(r.SecuritiesAccountNumber).toUpperCase() === acct &&
-          String(r.PriceType) !== 'Clean Price')
+      const prior = clientBids
+        .filter(r => String(r.PriceType) !== 'Clean Price')
         .reduce((s, r) => s + (Number(r.FaceValueTZS) || 0), 0);
       if (prior + amt > a.maxWap)
         return json({ ok: false, error: 'WAP cap exceeded: this client already has TZS ' +
