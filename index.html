@@ -277,8 +277,8 @@
    Every value must come from a Bank of Tanzania (or NBS) publication.
    ════════════════════════════════════════════════════════════════════ */
 const DATA = { /* INJECT-DATA */
-  asOf: "2026-09-23",
-  updateLine: "Auto-refreshed from BOT releases · last built 23 Sep 2026",
+  asOf: "2026-09-30",
+  updateLine: "Auto-refreshed from BOT releases · last built 30 Sep 2026",
   tape: [
     {label:"CBR", value:"6.25%", dir:"up"},
     {label:"REDISCOUNT", value:"8.75%", dir:"up"},
@@ -289,10 +289,10 @@ const DATA = { /* INJECT-DATA */
     {label:"2Y BOND", value:"8.403%", dir:"up"},
     {label:"5Y BOND", value:"9.528%", dir:"dn"},
     {label:"10Y BOND", value:"10.692%", dir:"dn"},
-    {label:"15Y BOND", value:"10.552%", dir:"up"},
+    {label:"15Y BOND", value:"10.791%", dir:"up"},
     {label:"20Y BOND", value:"11.331%", dir:"up"},
     {label:"25Y BOND", value:"11.480%", dir:"dn"},
-    {label:"TZS/USD", value:"2,658.88", dir:"up"},
+    {label:"TZS/USD", value:"2,654.76", dir:"dn"},
     {label:"IBCM 7-DAY", value:"6.41%", dir:"up"}
   ],
   sources: [
@@ -343,7 +343,7 @@ const DATA = { /* INJECT-DATA */
     {t:2, v:8.4033, note:"Auction No. 712, 29 Jul 2026 · 9.50% coupon · bids 3.9× the offer"},
     {t:5, v:9.5275, note:"Auction No. 700 re-opening, 16 Sep 2026 · 10.25% coupon · bids 2.8× the offer"},
     {t:10, v:10.6924, note:"Auction No. 711 re-opening, 2 Sep 2026 · 11.25% coupon · bids 2.5×"},
-    {t:15, v:10.5515, note:"19 Aug 2026 re-opening of a high-coupon (12.25%) bond at a premium price — that is why 15y sits below 10y; an auction-timing effect, not a true inversion"},
+    {t:15, v:10.7907, note:"Auction No. 696 3rd sale, 30 Sep 2026 · 12.25% coupon · bids 2.6× the offer — now prices above the 10-year, a normal upward-sloping curve"},
     {t:20, v:11.3306, note:"Auction No. 710, 8 Jul 2026 · 12.25% coupon · bids 1.9×"},
     {t:25, v:11.4799, note:"Auction No. 695 3rd sale, 5 Aug 2026 · 13.25% coupon · bids 4.3× — heaviest demand on the curve"}
   ],
@@ -383,8 +383,8 @@ const DATA = { /* INJECT-DATA */
       {t:"2026-07-22",v:10.8747,note:"Auction 711 · 11.25% coupon"},
       {t:"2026-09-02",v:10.6924,note:"Auction 711 re-opening · 11.25% coupon · bids 2.5×"}
      ]},
-    {y:15, name:"15-Year", coupon:"12.25%", way:10.5515, wap:"112.4713", date:"2026-08-19", auc:"No. 696 re-opening", bid:"4.1×", prev:"10.3861% · 13 May 2026", isin:"TZ1996105924",
-     note:"This 10.55% came from re-opening an older bond that pays a rich 12.25% coupon — investors paid a premium price (112.47 per 100) for it, which pulls the yield below the 10-year's. An auction-timing and coupon effect, not a signal that 15 years pays less than 10.",
+    {y:15, name:"15-Year", coupon:"12.25%", way:10.7907, wap:"110.5120", date:"2026-09-30", auc:"No. 696 3rd sale", bid:"2.6×", prev:"10.5515% · 19 Aug 2026", isin:"TZ1996105924",
+     note:"The 30 September re-opening of the same 12.25% line priced at 10.79% — up from 10.55% in August, and for the first time this cycle the 15-year now yields more than the 10-year (10.69%), restoring a normal upward-sloping curve. Bids covered the offer 2.6×, down from 4.1× in August. Investors still paid a premium price (110.51 per 100) for the rich coupon.",
      hist:[
       {t:"2024-09-11",v:15.35,note:"Auction 529 re-opening · 13.5% coupon"},
       {t:"2024-10-02",v:15.7611,note:"Auction 500 re-opening · 13.5% coupon"},
@@ -393,7 +393,8 @@ const DATA = { /* INJECT-DATA */
       {t:"2025-11-12",v:12.0794,note:"Auction 688 · 12.75% coupon"},
       {t:"2026-02-18",v:10.7834,note:"Auction 696 · 12.25% coupon"},
       {t:"2026-05-13",v:10.3861,note:"Auction 701 · 10.75% coupon"},
-      {t:"2026-08-19",v:10.5515,note:"Auction 696 re-opening · 12.25% coupon · bids 4.1×"}
+      {t:"2026-08-19",v:10.5515,note:"Auction 696 re-opening · 12.25% coupon · bids 4.1×"},
+      {t:"2026-09-30",v:10.7907,note:"Auction 696 3rd sale · 12.25% coupon · bids 2.6× the offer"}
      ]},
     {y:20, name:"20-Year", coupon:"12.25%", way:11.3306, wap:"107.1868", date:"2026-07-08", auc:"No. 710", bid:"1.9×", prev:"10.4297% · 28 May 2026", isin:"TZ1996106062",
      note:"Auction 710 drew TZS 610bn of bids for TZS 327bn on offer. The jump from 10.43% (May) to 11.33% (July) came alongside a new, higher 12.25% coupon line and the CBR hike week.",
@@ -464,12 +465,9 @@ const DATA = { /* INJECT-DATA */
     {t:"2025-12",v:2447.5},{t:"2026-01",v:2518.1},{t:"2026-02",v:2542.5},
     {t:"2026-03",v:2577.4},{t:"2026-04",v:2602},{t:"2026-05",v:2609.2},
     {t:"2026-06",v:2623.5},{t:"2026-07",v:2649.7},
-    {t:"2026-09-23",v:2658.88,note:"Latest BOT indicative selling rate (buying 2,632.55) — not end-of-month"}
+    {t:"2026-09-30",v:2654.76,note:"Latest BOT indicative selling rate (buying 2,628.48)"}
   ],
-  calendar: [
-    {date:"2026-09-23", what:"Treasury bills — all four tenors", m:"New issue"},
-    {date:"2026-09-30", what:"15-Year Treasury bond", m:"Re-opening · last auction on the published Q1 FY2026/27 calendar"}
-  ]
+  calendar: []
 };
 
 /* ════════════ helpers ════════════ */
@@ -861,7 +859,7 @@ function buildBonds(){
   secHead(sec,"Bonds & Yields","The government yield curve",
     'Treasury bonds are how the government borrows for the long haul — 2 to 25 years. The <b>weighted average yield (WAY)</b> from each auction is the market’s honest price for lending to the government at that tenor. Yields have fallen a long way from the 15%+ era of late 2024 — a curve-wide rally that repriced everything — with a modest back-up since the July 2026 CBR hike.');
   chartCard(sec,{title:"Yield curve — latest auction yield per tenor",
-    note:"Each dot is that tenor's most recent auction. Hover the dots — the 15-year sitting below the 10-year has a story.",
+    note:"Each dot is that tenor's most recent auction. The curve is now cleanly upward-sloping — the 15-year, which briefly dipped below the 10-year, moved back above it at the 30 September auction.",
     series:[{name:"Latest WAY", color:"var(--s1)", points:DATA.yieldCurve}],
     unit:"%", yFmtDp:2, xKind:"linear", markAll:true, wash:false, xFmt:v=>v+"y", xName:"Tenor", aria:"Government bond yield curve by tenor"});
   const card=el("div","chart-card");
@@ -977,9 +975,9 @@ function buildMarket(){
   secHead(sec,"Market Snapshot","The wider picture",
     'The backdrop every yield trades against: the shilling, the country’s FX buffers, and how fast money and credit are growing.');
   const g=el("div","grid c3"); sec.append(g);
-  tile(g,{label:"TZS / USD", value:"2,658.88", unit:"TZS", delta:"weaker y/y", dir:"up",
-    sub:"BOT selling rate · 23 Sep 2026 (buying 2,632.55)",
-    plain:"It takes 2,658.88 shillings to buy a dollar — about 9% more than a year ago. On this chart, up = weaker shilling.",
+  tile(g,{label:"TZS / USD", value:"2,654.76", unit:"TZS", delta:"weaker y/y", dir:"up",
+    sub:"BOT selling rate · 30 Sep 2026 (buying 2,628.48)",
+    plain:"It takes 2,654.76 shillings to buy a dollar — about 9% more than a year ago. On this chart, up = weaker shilling.",
     econ:"A weaker shilling makes imports (fuel, fertiliser) pricier — one of the channels behind the inflation climb.",
     mkt:"FX weakness pressures BOT to keep policy tight, which supports higher yields."});
   tile(g,{label:"FX reserves", value:"6.20", unit:"USD bn", delta:"4.8 months cover", dir:"up",
