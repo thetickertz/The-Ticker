@@ -443,12 +443,44 @@ function handleAdminSendCode(p) {
   let n = 0;
   for (let i = 0; i < 4; i++) n = n * 256 + (bytes[i] & 255);
   const code = String(100000 + (n % 900000));
+  // greet the person by their first name (from the Admins tab, or the e-mail)
+  const fullName = String(row.Name == null ? '' : row.Name).trim() || nameFromEmail(email);
+  const firstName = (fullName.split(/\s+/)[0] || 'there');
+  const escH = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const plain =
+    'Good day ' + firstName + ',\n\n' +
+    'Use this verification code to confirm it is really you and finish setting up your CRDB Capital Markets admin sign-in:\n\n' +
+    '    ' + code + '\n\n' +
+    'Enter it in the admin portal together with the password you are creating. The code expires in 10 minutes.\n\n' +
+    'If you did not request this, you can safely ignore this e-mail - nobody can proceed without the code.\n\n' +
+    'CRDB Capital Markets - Auction Administration Portal';
+  const html =
+    '<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;color:#1a1a1a">' +
+    '<div style="background:#00713d;color:#ffffff;padding:16px 20px;border-radius:8px 8px 0 0">' +
+    '<div style="font-size:16px;font-weight:700">CRDB Capital Markets</div>' +
+    '<div style="font-size:12px;opacity:.85">Auction Administration Portal</div></div>' +
+    '<div style="border:1px solid #e2e8e5;border-top:0;padding:22px 20px;border-radius:0 0 8px 8px">' +
+    '<p style="margin:0 0 12px">Good day <b>' + escH(firstName) + '</b>,</p>' +
+    '<p style="margin:0 0 16px">Use the verification code below to confirm it is really you and finish setting up your admin sign-in.</p>' +
+    '<div style="text-align:center;margin:22px 0">' +
+    '<div style="display:inline-block;font-family:\'Courier New\',monospace;font-size:30px;font-weight:700;' +
+    'letter-spacing:8px;color:#00713d;background:#f0f7f3;border:1px solid #cfe6da;border-radius:8px;padding:12px 22px">' +
+    code + '</div></div>' +
+    '<p style="margin:0 0 8px">Enter it in the admin portal together with the password you are creating. ' +
+    'The code expires in <b>10 minutes</b>.</p>' +
+    '<p style="margin:16px 0 0;font-size:12px;color:#667">If you did not request this, you can safely ignore this ' +
+    'e-mail - nobody can proceed without the code.</p></div>' +
+    '<div style="text-align:center;font-size:11px;color:#98a4a0;padding:12px">' +
+    'CRDB Capital Markets &middot; Auction Administration Portal &middot; &copy; The Ticker</div></div>';
   // send FIRST: a failed send (mail quota, transient error) must not burn
   // the hourly allowance or cache a code nobody received
-  MailApp.sendEmail(email, 'CRDB bid portal - your verification code',
-    'Your admin sign-up verification code is: ' + code + '\n\n' +
-    'It expires in 10 minutes. Type it in the admin portal together with the password you are creating.\n' +
-    'If you did not request this, simply ignore this e-mail - nobody can proceed without the code.');
+  MailApp.sendEmail({
+    to: email,
+    subject: 'CRDB BID ADMIN PORTAL VERIFICATION CODE',
+    name: 'CRDB Capital Markets',
+    body: plain,
+    htmlBody: html,
+  });
   cache.put('vsend:' + email, String(sends + 1), 3600);
   cache.put('vsend:all', String(all + 1), 3600);
   cache.put('vcode:' + email, code, 600);
