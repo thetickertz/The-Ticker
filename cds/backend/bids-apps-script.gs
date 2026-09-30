@@ -206,6 +206,36 @@ function sheetRows(name, cols) {
   });
 }
 
+// Just ONE client's bids in ONE auction, without materialising the whole
+// Bids history each time (the register grows without bound). TextFinder
+// scans server-side and returns only the matching account cells; if it is
+// ever unavailable we fall back to a full scan so correctness never depends
+// on it. Used by the duplicate check and the WAP cap, both under the lock.
+function clientAuctionBids(acct, auctionNo) {
+  try {
+    const sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Bids');
+    const lastRow = sh.getLastRow(), lastCol = sh.getLastColumn();
+    if (lastRow < 2 || lastCol < 1) return [];
+    const head = sh.getRange(1, 1, 1, lastCol).getValues()[0].map(String);
+    const iAcct = head.indexOf('SecuritiesAccountNumber');
+    if (iAcct < 0) throw new Error('no account column');
+    const found = sh.createTextFinder(acct).matchEntireCell(true).matchCase(true).findAll();
+    const rows = [];
+    for (let k = 0; k < found.length; k++) {
+      if (found[k].getColumn() !== iAcct + 1) continue; // account column only
+      const vals = sh.getRange(found[k].getRow(), 1, 1, lastCol).getValues()[0];
+      const o = {};
+      for (let i = 0; i < head.length; i++) o[head[i]] = vals[i];
+      if (String(o.AuctionNo) === String(auctionNo)) rows.push(o);
+    }
+    return rows;
+  } catch (e) {
+    return sheetRows('Bids', BID_COLS).filter(r =>
+      String(r.AuctionNo) === String(auctionNo) &&
+      String(r.SecuritiesAccountNumber).trim().toUpperCase() === acct);
+  }
+}
+
 // A value written to a cell must never execute as a formula.
 function safe(v) {
   const s = String(v == null ? '' : v);
@@ -556,12 +586,30 @@ function handleBid(p) {
     if (nAll >= BID_CAP_ALL)
       return json({ ok: false, error: 'The system is receiving unusually many bids right now - try again shortly.' });
 
+    // this client's bids already recorded in this auction (used for both the
+    // duplicate check and the WAP cap); bounded read, once, under the lock
+    const clientBids = clientAuctionBids(acct, a.auctionNo);
+
+    // reject an EXACT duplicate: the same client already has a bid at the
+    // same face value and the same price in this auction - whoever entered
+    // the first one. (Price = clean-price value for a clean bid; for a WAP
+    // bid there is no chosen price, so same client + same face value + WAP
+    // counts as the same bid.) A genuine same-submission retry never reaches
+    // here - it replayed from the idempotency cache above.
+    const dup = clientBids.find(r =>
+      Number(r.FaceValueTZS) === amt &&
+      String(r.PriceType) === String(p.priceType) &&
+      (!isClean || Math.round(Number(r.CleanPricePer100) * 10000) === Math.round(Number(p.cleanPrice) * 10000)));
+    if (dup)
+      return json({ ok: false, duplicate: true,
+        error: 'Duplicate bid: client ' + acct + ' already has a bid of TZS ' + amt.toLocaleString() +
+          (isClean ? ' at clean price ' + Number(p.cleanPrice) : ' (WAP)') +
+          ' in auction ' + a.auctionNo + '. The same bid cannot be entered twice.' });
+
     // WAP cap across the client's earlier WAP bids in this auction
     if (a.maxWap > 0 && !isClean) {
-      const prior = sheetRows('Bids', BID_COLS)
-        .filter(r => String(r.AuctionNo) === a.auctionNo &&
-          String(r.SecuritiesAccountNumber).toUpperCase() === acct &&
-          String(r.PriceType) !== 'Clean Price')
+      const prior = clientBids
+        .filter(r => String(r.PriceType) !== 'Clean Price')
         .reduce((s, r) => s + (Number(r.FaceValueTZS) || 0), 0);
       if (prior + amt > a.maxWap)
         return json({ ok: false, error: 'WAP cap exceeded: this client already has TZS ' +
@@ -582,6 +630,9 @@ function handleBid(p) {
       a.tenors.length ? safe(String(p.tenor)) + ' days' : safe(a.maturityPeriod),
       safe(subKey ? String(p.submitId) : ''),
     ]);
+    // commit the row NOW, before the lock is released, so the next bid to
+    // acquire the lock sees it and the duplicate check stays truly atomic
+    SpreadsheetApp.flush();
     const result = { ok: true, ref: ref,
       at: Utilities.formatDate(now, TZ, 'yyyy-MM-dd HH:mm:ss') };
     // memoize the result FIRST so any retry replays instead of re-appending,

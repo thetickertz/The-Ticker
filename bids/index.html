@@ -312,6 +312,7 @@ async function api(body){
     throw new Error("The system did not answer normally - please try again shortly or contact the admin.");
   }
 }
+const demoBids = []; // demo-only memory of submitted bids, for the duplicate preview
 function demoApi(body){
   if(body.action === "login"){
     if(!staffEmailOk(body.email) || !/^\d{1,5}$/.test(body.staffNo))
@@ -320,10 +321,24 @@ function demoApi(body){
       .map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
     return { ok:true, token:"demo", name: name, branch:"Head Office (demo)", staffNo: body.staffNo };
   }
-  if(body.action === "bid")
+  if(body.action === "bid"){
+    const acct = String(body.securitiesAccount || "").trim().toUpperCase();
+    const amt = Number(String(body.faceValue || "").replace(/\D/g, ""));
+    const isClean = body.priceType === "Clean Price";
+    // same client + same face value + same price already entered = duplicate
+    const dup = demoBids.find(b => b.auctionNo === body.auctionNo && b.acct === acct &&
+      b.amt === amt && b.priceType === body.priceType &&
+      (!isClean || Math.round(b.clean * 10000) === Math.round(Number(body.cleanPrice) * 10000)));
+    if(dup) return { ok:false, duplicate:true,
+      error: "Duplicate bid: client " + acct + " already has a bid of TZS " + amt.toLocaleString() +
+        (isClean ? " at clean price " + Number(body.cleanPrice) : " (WAP)") +
+        " in auction " + body.auctionNo + ". The same bid cannot be entered twice." };
+    demoBids.push({ auctionNo: body.auctionNo, acct: acct, amt: amt,
+      priceType: body.priceType, clean: isClean ? Number(body.cleanPrice) : 0 });
     return { ok:true, ref:"BID-DEMO-" + String(Math.floor(Math.random()*9000)+1000),
       // East Africa Time, like the live backend stamps it
       at: new Date().toLocaleString("sv-SE", { timeZone: "Africa/Dar_es_Salaam" }) };
+  }
   return { ok:false, error:"unknown" };
 }
 

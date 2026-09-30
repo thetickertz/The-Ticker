@@ -192,7 +192,7 @@ Validation is enforced twice (browser and server), with instant inline
 feedback as staff move between fields: securities account strictly
 `BOTCDSB026`/`BOTCDSCORU` + digits, amount ≥ minimum and in the configured
 multiples, price inside the band with ≤4 decimals, account to debit 10–13
-digits, client e-mail required, deadline respected. The staff number is
+digits, client e-mail required, deadline respected. **Duplicate guard:** the same client (securities account) cannot have two bids at the same face value and the same price in one auction - whoever tries the second one (the same staffer or a different staffer) is told it is a duplicate and it is refused, checked on the server so it holds across all staff. The staff number is
 sealed into the signed session token, so a bid can never carry a different
 number than the one signed in with, and flood brakes cap the entry rate
 (60 bids per account per hour, 600 system-wide) so the register cannot be
