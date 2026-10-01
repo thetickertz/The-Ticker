@@ -59,6 +59,15 @@ function safe(v) {
   return /^[=+\-@]/.test(s) ? "'" + s : s;
 }
 
+// Store as TEXT so Sheets keeps the exact digits - appendRow otherwise reads
+// an all-digit string (bank account, NIN, TIN) as a number and drops leading
+// zeros or shows scientific notation. The leading apostrophe forces text (not
+// shown, not part of the value) and also neutralises formula injection.
+function txt(v) {
+  const s = String(v == null ? '' : v);
+  return s === '' ? '' : "'" + s;
+}
+
 // Only well-formed base64 data URLs of real document types are accepted -
 // for Drive AND for embedding in the PDF (base64 cannot contain quotes,
 // so a validated URL is also safe inside an <img src="..."> attribute).
@@ -147,11 +156,11 @@ function doPost(e) {
     sh.appendRow([
       new Date(), safe(ref), safe(p.accountName || ''), safe((p.accountType || '') + ' → ' + (p.formVariant || '')), safe(p.category || ''), safe(p['class'] || ''),
       safe([h0.surname, h0.firstName, h0.middleName].filter(Boolean).join(' ') || (p.company && p.company.name) || ''),
-      safe(h0.nin || ''), safe(h0.tin || (p.company && p.company.tin) || ''),
-      safe(h0.mobile ? (h0.mobile.indexOf('+') === 0 ? h0.mobile : '+255' + h0.mobile) : (p.company && p.company.contact && p.company.contact.mobile) || ''),
+      txt(h0.nin || ''), txt(h0.tin || (p.company && p.company.tin) || ''),
+      txt(h0.mobile ? (h0.mobile.indexOf('+') === 0 ? h0.mobile : '+255' + h0.mobile) : (p.company && p.company.contact && p.company.contact.mobile) || ''),
       safe(h0.email || (p.company && p.company.email) || ''),
       safe((p.bank && p.bank.bank) + ' · ' + (p.bank && p.bank.branch)),
-      safe((p.bank && p.bank.accountNumber) || ''), safe((p.mandate && p.mandate.rule) || ''),
+      txt((p.bank && p.bank.accountNumber) || ''), safe((p.mandate && p.mandate.rule) || ''),
       safe((p.declarations && p.declarations.sourceOfFunds) || ''), safe(p.existingCdsId || ''),
       folder.getUrl(), 'NEW',
     ]);

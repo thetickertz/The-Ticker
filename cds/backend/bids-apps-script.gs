@@ -242,6 +242,17 @@ function safe(v) {
   return /^[=+\-@]/.test(s) ? "'" + s : s;
 }
 
+// Store a value as TEXT so Sheets keeps it exactly as typed. appendRow
+// otherwise reads an all-digit string as a NUMBER and drops a leading zero
+// (a bank account 0152494956800 would land as 152494956800) or shows a long
+// number in scientific notation. The leading apostrophe forces text - it is
+// not part of the stored value, does not show, and is not returned by
+// getValues() - and it also neutralises formula injection.
+function txt(v) {
+  const s = String(v == null ? '' : v);
+  return s === '' ? '' : "'" + s;
+}
+
 function staffEmailOk(email) {
   return new RegExp('^[a-z0-9._%+-]+@' + STAFF_DOMAIN.replace(/\./g, '\\.') + '$').test(email);
 }
@@ -652,15 +663,15 @@ function handleBid(p) {
     const ref = 'BID-' + Utilities.formatDate(now, TZ, 'yyyyMMdd-HHmmss') + '-' + staffNo;
     const sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Bids');
     sh.appendRow([
-      now, ref, a.auctionNo, safe(a.security), safe(email), safe(staffNo),
-      safe(String(p.investorNames).trim()), String(p.nature), safe(acct),
+      now, ref, a.auctionNo, safe(a.security), safe(email), txt(staffNo),
+      safe(String(p.investorNames).trim()), String(p.nature), txt(acct),
       amt, String(p.priceType),
       isClean ? Number(p.cleanPrice) : '',
       isClean ? Math.round(amt * Number(p.cleanPrice)) / 100 : '',
-      safe(String(p.accountToDebit)), safe(String(p.branch).trim()),
+      txt(p.accountToDebit), safe(String(p.branch).trim()),
       safe(String(p.responsible).trim()), safe(clientEmail),
       a.tenors.length ? safe(String(p.tenor)) + ' days' : safe(a.maturityPeriod),
-      safe(subKey ? String(p.submitId) : ''),
+      subKey ? txt(p.submitId) : '',
     ]);
     // commit the row NOW, before the lock is released, so the next bid to
     // acquire the lock sees it and the duplicate check stays truly atomic
