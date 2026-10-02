@@ -1,0 +1,99 @@
+name: DSE daily market report
+
+# Builds The Ticker's DSE Daily Market Report after each trading day and commits it to main,
+# where GitHub Pages serves it at https://thetickertz.github.io/The-Ticker/market-report/
+#
+# Runs several times each weekday afternoon/evening (East Africa Time = UTC+3). Each run is
+# idempotent: it asks the DSE for its last trading day and only builds if that day has not
+# been built yet (or was built before the exchange published its own Market Report).
+
+on:
+  schedule:
+    - cron: "40 13 * * 1-5"   # 16:40 EAT – shortly after the close
+    - cron: "40 15 * * 1-5"   # 18:40 EAT – the DSE Market Report is usually out by now
+    - cron: "40 17 * * 1-5"   # 20:40 EAT – late catch-up
+    - cron: "10 5 * * 2-6"    # 08:10 EAT next morning – final catch-up for a late report
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Trading day to build (YYYY-MM-DD) or 'auto' for the last trading day"
+        default: "auto"
+      force:
+        description: "Rebuild even if that day already exists"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: market-report
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: scripts/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          pip install -r scripts/requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Build the report
+        id: build
+        env:
+          TZ: Africa/Dar_es_Salaam
+        run: |
+          ARGS="--date ${{ github.event.inputs.date || 'auto' }}"
+          if [ "${{ github.event.inputs.force }}" = "true" ]; then ARGS="$ARGS --force"; fi
+          python -m scripts.market_report.build $ARGS
+
+      - name: Commit and publish
+        if: steps.build.outputs.built == 'true'
+        run: |
+          git config user.name "the-ticker-bot"
+          git config user.email "the-ticker-bot@users.noreply.github.com"
+          git add market-report
+          if git diff --cached --quiet; then
+            echo "nothing changed"; exit 0
+          fi
+          git commit -m "market report ${{ steps.build.outputs.date }} (${{ steps.build.outputs.summary }})"
+          # another run may have pushed in between: rebase onto the latest main and retry
+          for i in 1 2 3; do
+            git pull --rebase origin main && git push origin HEAD:main && break
+            sleep $((i * 10))
+          done
+
+      - name: E-mail the report (only if SMTP secrets are configured)
+        if: steps.build.outputs.built == 'true' && steps.build.outputs.complete == 'true' && env.REPORT_SMTP_HOST != ''
+        env:
+          REPORT_SMTP_HOST: ${{ secrets.REPORT_SMTP_HOST }}
+          REPORT_SMTP_PORT: ${{ secrets.REPORT_SMTP_PORT }}
+          REPORT_SMTP_USER: ${{ secrets.REPORT_SMTP_USER }}
+          REPORT_SMTP_PASS: ${{ secrets.REPORT_SMTP_PASS }}
+          REPORT_EMAIL_FROM: ${{ secrets.REPORT_EMAIL_FROM }}
+          REPORT_EMAIL_TO: ${{ secrets.REPORT_EMAIL_TO }}
+        run: python -m scripts.market_report.emailer
+
+      - name: Keep the build log as an artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: market-report-${{ steps.build.outputs.date || 'run' }}-${{ github.run_id }}
+          path: |
+            market-report/data/state.json
+            market-report/latest.pdf
+          if-no-files-found: ignore
+          retention-days: 14
