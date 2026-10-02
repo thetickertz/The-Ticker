@@ -81,4 +81,7 @@ is skipped. (Gmail works with an app password; Microsoft 365 with SMTP AUTH enab
   was skipped; fix `parse_report()` in `dse.py` and re-run with `--force`.
 - **Holidays.** The build keys off the DSE's own last-trading-day endpoint, so public holidays need no
   calendar.
+- **Repository size.** Each day adds roughly 400 KB (HTML + JSON + PDF). PDFs older than a year are
+  pruned automatically (`--keep-pdf-days`, default 366); the HTML page and JSON dataset for every day are
+  kept, so the archive stays complete.
 - **Branding/narrative changes.** Text templates live in `narrative.py`; layout and CSS in `render.py`.

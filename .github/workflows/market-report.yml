@@ -38,7 +38,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
-          fetch-depth: 1
+          fetch-depth: 0   # full history so the rebase-before-push below always works
 
       - uses: actions/setup-python@v5
         with:

@@ -56,10 +56,15 @@ def main(argv=None) -> int:
         msg.add_attachment(pdf.read_bytes(), maintype="application", subtype="pdf",
                            filename=f"The-Ticker-DSE-Daily-Market-Report-{d}.pdf")
     port = int(os.environ.get("REPORT_SMTP_PORT", "587"))
-    with smtplib.SMTP(host, port, timeout=60) as s:
+    if port == 465:  # implicit TLS
+        server = smtplib.SMTP_SSL(host, port, timeout=60)
+    else:
+        server = smtplib.SMTP(host, port, timeout=60)
+    with server as s:
         s.ehlo()
-        if port != 25:
+        if port != 465 and s.has_extn("starttls"):
             s.starttls()
+            s.ehlo()
         user, pw = os.environ.get("REPORT_SMTP_USER"), os.environ.get("REPORT_SMTP_PASS")
         if user and pw:
             s.login(user, pw)

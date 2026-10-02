@@ -85,6 +85,8 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default=str(ROOT / "market-report"))
     ap.add_argument("--force", action="store_true", help="rebuild even if this day was already built")
     ap.add_argument("--no-pdf", action="store_true")
+    ap.add_argument("--keep-pdf-days", type=int, default=366,
+                    help="delete archived PDFs older than this many days to keep the repository small (HTML and JSON are kept forever)")
     args = ap.parse_args(argv)
 
     out = Path(args.out)
@@ -155,6 +157,18 @@ def main(argv=None) -> int:
         # re-render without the PDF button
         (out / "index.html").write_text(render(ds, archive, rel="", pdf_name=None), encoding="utf-8")
         (arch_dir / f"{iso(d)}.html").write_text(render(ds, archive, rel="../", pdf_name=None), encoding="utf-8")
+        (arch_dir / "index.html").write_text(render_archive(archive), encoding="utf-8")
+    # retention: PDFs are ~300 KB each; prune old ones (the HTML and JSON stay)
+    if args.keep_pdf_days > 0:
+        from datetime import timedelta
+        cutoff = iso(d - timedelta(days=args.keep_pdf_days))
+        for x in archive:
+            if x["date"] < cutoff and x.get("pdf"):
+                pdf_path = arch_dir / f"{x['date']}.pdf"
+                if pdf_path.exists():
+                    pdf_path.unlink()
+                    log(f"pruned {pdf_path.name}")
+                x["pdf"] = False
         (arch_dir / "index.html").write_text(render_archive(archive), encoding="utf-8")
     save_json(data_dir / "archive.json", archive)
 
