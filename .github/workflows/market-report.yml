@@ -1,18 +1,21 @@
 name: DSE daily market report
 
-# Builds The Ticker's DSE Daily Market Report after each trading day and commits it to main,
-# where GitHub Pages serves it at https://thetickertz.github.io/The-Ticker/market-report/
+# OPTIONAL cloud runner. The report is normally produced by scripts/run_daily.sh (macOS/Linux) or
+# scripts/run_daily.ps1 (Windows) on your own computer — see market-report/README.md. This
+# workflow does the same job on GitHub's servers and commits to main, where GitHub Pages serves
+# https://thetickertz.github.io/The-Ticker/market-report/
 #
-# Runs several times each weekday afternoon/evening (East Africa Time = UTC+3). Each run is
-# idempotent: it asks the DSE for its last trading day and only builds if that day has not
-# been built yet (or was built before the exchange published its own Market Report).
+# The schedule is switched OFF so the two never compete. To run in the cloud instead of (or as a
+# backup to) your computer, uncomment the `schedule:` block. Each run is idempotent: it asks the
+# DSE for its last trading day and only builds if that day has not been built yet (or was built
+# before the exchange published its own Market Report), so running both is safe, just redundant.
 
 on:
-  schedule:
-    - cron: "40 13 * * 1-5"   # 16:40 EAT – shortly after the close
-    - cron: "40 15 * * 1-5"   # 18:40 EAT – the DSE Market Report is usually out by now
-    - cron: "40 17 * * 1-5"   # 20:40 EAT – late catch-up
-    - cron: "10 5 * * 2-6"    # 08:10 EAT next morning – final catch-up for a late report
+  # schedule:
+  #   - cron: "40 13 * * 1-5"   # 16:40 EAT – shortly after the close
+  #   - cron: "40 15 * * 1-5"   # 18:40 EAT – the DSE Market Report is usually out by now
+  #   - cron: "40 17 * * 1-5"   # 20:40 EAT – late catch-up
+  #   - cron: "10 5 * * 2-6"    # 08:10 EAT next morning – final catch-up for a late report
   workflow_dispatch:
     inputs:
       date:
