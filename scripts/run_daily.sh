@@ -26,9 +26,14 @@ if [ ! -x "$PY" ]; then
   "$PY" -m playwright install chromium
 fi
 
-BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-if [ "${REPORT_PUSH:-0}" = "1" ]; then
+# Git is only needed when publishing (REPORT_PUSH=1); a ZIP download of the project works without it.
+HAVE_GIT=0
+if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then HAVE_GIT=1; fi
+if [ "${REPORT_PUSH:-0}" = "1" ] && [ "$HAVE_GIT" = 1 ]; then
+  BRANCH="$(git rev-parse --abbrev-ref HEAD)"
   git pull --rebase --autostash origin "$BRANCH" || echo "warning: could not pull latest $BRANCH; continuing with the local copy"
+elif [ "${REPORT_PUSH:-0}" = "1" ]; then
+  echo "warning: REPORT_PUSH=1 but Git is not available here; building without publishing"
 fi
 
 OUT="$(mktemp)"; export GITHUB_OUTPUT="$OUT"   # build.py writes built=/date=/complete=/pdf= here
@@ -40,7 +45,7 @@ PDF="$(grep -m1 '^pdf=' "$OUT" | cut -d= -f2 || true)"
 SUMMARY="$(grep -m1 '^summary=' "$OUT" | cut -d= -f2- || true)"
 rm -f "$OUT"
 
-if [ "$BUILT" = "true" ] && [ "${REPORT_PUSH:-0}" = "1" ]; then
+if [ "$BUILT" = "true" ] && [ "${REPORT_PUSH:-0}" = "1" ] && [ "$HAVE_GIT" = 1 ]; then
   git add -A market-report
   if git diff --cached --quiet; then
     echo "nothing changed to commit"

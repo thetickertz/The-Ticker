@@ -37,11 +37,11 @@ the result to GitHub so the public page updates.
 
 **One-time setup (10 minutes)**
 
-1. Install [Python 3.11+](https://www.python.org/downloads/) (on Windows tick *Add python.exe to PATH*)
-   and [Git](https://git-scm.com/downloads). Make sure `git push` works from your terminal for this
-   repository (GitHub Desktop or `gh auth login` sets the credentials up).
-2. Clone the repository and open a terminal in it:
-   `git clone https://github.com/thetickertz/The-Ticker.git && cd The-Ticker`
+1. Install [Python 3.11+](https://www.python.org/downloads/) (on Windows tick *Add python.exe to PATH*;
+   on macOS also run *Install Certificates.command* from the Python folder in Applications).
+   Git is optional: it is only needed if you publish or want `git pull` updates.
+2. Get the project: either **Code → Download ZIP** on GitHub and unzip it (no Git needed), or
+   `git clone https://github.com/thetickertz/The-Ticker.git`. Open a terminal in that folder.
 3. Copy `scripts/.env.example` to `scripts/.env`. The defaults build locally and save to the Desktop
    folder without publishing anything. Fill in the SMTP lines only if you want the PDF e-mailed.
 4. Run it once by hand to let it install its own virtual environment and Chromium (first run ~3 minutes):
@@ -61,7 +61,8 @@ full exchange report, writes `archive/<date>.html`, `archive/<date>.pdf` and `da
 updates `archive/index.html` and (when the day is the newest) `index.html`, copies the PDF and web
 page to the Desktop folder, re-checks the last few days for a partial build whose Market Report has
 since appeared, then e-mails the PDF if SMTP is configured and pushes if publishing is on. Logs go to
-`~/.the-ticker/run.log` (Windows: `%USERPROFILE%\.the-tickerun.log`).
+`~/.the-ticker/run.log` (Windows: `%USERPROFILE%\.the-ticker
+un.log`).
 
 If the exchange has not yet posted its Market Report when a run happens, the report is still built
 from the price feed (all prices, indices, movers, auctions and funds) with a note that participation

@@ -36,10 +36,16 @@ if (-not (Test-Path $py)) {
   & $py -m playwright install chromium
 }
 
-$branch = (git rev-parse --abbrev-ref HEAD).Trim()
-if ($env:REPORT_PUSH -eq "1") {
+# Git is only needed when publishing (REPORT_PUSH=1); a ZIP download of the project works without it.
+$haveGit = $false
+if (Get-Command git -ErrorAction SilentlyContinue) { git rev-parse --is-inside-work-tree 2>$null | Out-Null; $haveGit = ($LASTEXITCODE -eq 0) }
+$branch = $null
+if ($env:REPORT_PUSH -eq "1" -and $haveGit) {
+  $branch = (git rev-parse --abbrev-ref HEAD).Trim()
   git pull --rebase --autostash origin $branch
   if ($LASTEXITCODE -ne 0) { Write-Host "warning: could not pull latest $branch; continuing with the local copy" }
+} elseif ($env:REPORT_PUSH -eq "1") {
+  Write-Host "warning: REPORT_PUSH=1 but Git is not available here; building without publishing"
 }
 
 # build (build.py writes built=/date=/complete=/pdf= to the file named by GITHUB_OUTPUT)
@@ -51,7 +57,7 @@ $out = @{}
 Get-Content $outFile | ForEach-Object { if ($_ -match '^([a-z]+)=(.*)$') { $out[$Matches[1]] = $Matches[2] } }
 Remove-Item $outFile -ErrorAction SilentlyContinue
 
-if ($out["built"] -eq "true" -and $env:REPORT_PUSH -eq "1") {
+if ($out["built"] -eq "true" -and $env:REPORT_PUSH -eq "1" -and $haveGit) {
   git add -A market-report
   git diff --cached --quiet
   if ($LASTEXITCODE -eq 0) {
