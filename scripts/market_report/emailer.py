@@ -22,13 +22,14 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def main(argv=None) -> int:
-    out = Path(os.environ.get("REPORT_OUT", ROOT / "market-report"))
+    env = lambda k, default=None: (os.environ.get(k) or "").strip() or default  # '' counts as unset
+    out = Path(env("REPORT_OUT", str(ROOT / "market-report")))
     state = load_json(out / "data" / "state.json", {})
-    d = state.get("last_built")
+    d = env("REPORT_DATE") or state.get("last_built")
     if not d:
         print("nothing built yet")
         return 0
-    host, to = os.environ.get("REPORT_SMTP_HOST"), os.environ.get("REPORT_EMAIL_TO")
+    host, to = env("REPORT_SMTP_HOST"), env("REPORT_EMAIL_TO")
     if not host or not to:
         print("e-mail not configured (REPORT_SMTP_HOST / REPORT_EMAIL_TO missing); skipping")
         return 0
@@ -39,7 +40,7 @@ def main(argv=None) -> int:
     dd = parse_iso(d)
     msg = EmailMessage()
     msg["Subject"] = f"The Ticker · DSE Daily Market Report · {short_date(dd)}"
-    msg["From"] = os.environ.get("REPORT_EMAIL_FROM", os.environ.get("REPORT_SMTP_USER", "the-ticker@example.com"))
+    msg["From"] = env("REPORT_EMAIL_FROM") or env("REPORT_SMTP_USER") or "the-ticker@example.com"
     msg["To"] = to
     bullets = [re.sub(r"<[^>]+>", "", b) for b in summary_bullets(ds)]
     url = "https://thetickertz.github.io/The-Ticker/market-report/"
@@ -55,7 +56,7 @@ def main(argv=None) -> int:
     if pdf.exists():
         msg.add_attachment(pdf.read_bytes(), maintype="application", subtype="pdf",
                            filename=f"The-Ticker-DSE-Daily-Market-Report-{d}.pdf")
-    port = int(os.environ.get("REPORT_SMTP_PORT", "587"))
+    port = int(env("REPORT_SMTP_PORT", "587"))
     if port == 465:  # implicit TLS
         server = smtplib.SMTP_SSL(host, port, timeout=60)
     else:
@@ -65,7 +66,7 @@ def main(argv=None) -> int:
         if port != 465 and s.has_extn("starttls"):
             s.starttls()
             s.ehlo()
-        user, pw = os.environ.get("REPORT_SMTP_USER"), os.environ.get("REPORT_SMTP_PASS")
+        user, pw = env("REPORT_SMTP_USER"), env("REPORT_SMTP_PASS")
         if user and pw:
             s.login(user, pw)
         s.send_message(msg)

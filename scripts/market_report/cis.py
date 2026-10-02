@@ -25,7 +25,8 @@ def _series_stats(points: list[tuple[date, float, float | None]], year_start_nav
     daily = ((nav0 / prev[1]) - 1) * 100 if prev and prev[1] else None
     ytd = ((nav0 / year_start_nav) - 1) * 100 if year_start_nav else None
     days = (d0 - date(d0.year - 1, 12, 31)).days
-    ann = (ytd * 365.0 / days) if (ytd is not None and days > 0) else None
+    # a linear extrapolation is meaningless in the first weeks of a year
+    ann = (ytd * 365.0 / days) if (ytd is not None and days >= 30) else None
     return {"date": d0, "nav_per_unit": nav0, "nav_total": tot0, "prev_date": prev[0] if prev else None,
             "prev_nav_per_unit": prev[1] if prev else None, "daily_change_pct": daily,
             "year_start_nav": year_start_nav, "ytd_pct": ytd, "annualised_pct": ann}

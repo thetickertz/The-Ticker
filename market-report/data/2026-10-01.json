@@ -1,9 +1,9 @@
 {
  "date": "2026-10-01",
  "prev_date": "2026-09-30",
- "generated_at": "2026-10-02T09:28+03:00",
+ "generated_at": "2026-10-02T10:06+03:00",
  "sources": {
-  "dse_report_url": "https://dse.co.tz/get/daily/report/eyJpdiI6IlphSW0wakFDUXk1SXZ3V1dBUjJNNHc9PSIsInZhbHVlIjoiQjZMOU85UDQ0bVRvMWdNOGQzb0RoQT09IiwibWFjIjoiOWYxZWM5ODFkYTRjNWE2NzY3MmQ0MDE4ZjYyNDljOWRmMWU4Nzc0YzI4ODRiYjVmMDliYTA4N2FlMmRjZmUwNyIsInRhZyI6IiJ9",
+  "dse_report_url": "https://dse.co.tz/get/daily/report/eyJpdiI6IlRTQkRtVnhKMlJpY1BCY3hMTmxqV0E9PSIsInZhbHVlIjoiTkY3eEl0d3dZei9mOWV3MnZNRmlnZz09IiwibWFjIjoiMTI3ZjQ2OWFlMzUxZDdlNzM4MjljNTE5N2E1MjVjYjZmYWRmOGM1YzY3NjYyZmUzZDIwODAyMmEyNjBmM2UzOSIsInRhZyI6IiJ9",
   "dse_report_found": true,
   "dse_api": "https://dse.co.tz/",
   "bot": "https://www.bot.go.tz/",
@@ -538,11 +538,22 @@
   "deals": 3367
  },
  "breadth": {
-  "advancers": 7,
-  "decliners": 11,
-  "unchanged": 10,
-  "traded": 20
+  "advancers": 6,
+  "decliners": 10,
+  "unchanged": 4,
+  "traded": 20,
+  "not_traded": 8
  },
+ "cross_moves": [
+  {
+   "code": "EABL",
+   "change_pct": 0.3436426116838476
+  },
+  {
+   "code": "NMG",
+   "change_pct": -1.5873015873015928
+  }
+ ],
  "indices": [
   {
    "code": "DSEI",
@@ -612,15 +623,15 @@
  "fx": {
   "TZS/USD": {
    "today": 2641.62,
-   "prev": 2642.25
+   "prev": null
   },
   "TZS/KE": {
    "today": 20.36,
-   "prev": 20.36
+   "prev": null
   },
   "TZS/GBP": {
    "today": 3510.97,
-   "prev": 3495.97
+   "prev": null
   }
  },
  "participation": {
@@ -891,61 +902,70 @@
     "clean_price": 111.2205
    }
   ],
+  "other_bonds": [],
   "by_term": [
    {
     "term": 2,
     "deals": 0,
     "turnover_mln": 0.0,
     "wa_price": null,
-    "wa_yield": null
+    "wa_yield": null,
+    "wa_clean": null
    },
    {
     "term": 5,
     "deals": 0,
     "turnover_mln": 0.0,
     "wa_price": null,
-    "wa_yield": null
+    "wa_yield": null,
+    "wa_clean": null
    },
    {
     "term": 7,
     "deals": 0,
     "turnover_mln": 0.0,
     "wa_price": null,
-    "wa_yield": null
+    "wa_yield": null,
+    "wa_clean": null
    },
    {
     "term": 10,
     "deals": 0,
     "turnover_mln": 0.0,
     "wa_price": null,
-    "wa_yield": null
+    "wa_yield": null,
+    "wa_clean": null
    },
    {
     "term": 15,
     "deals": 2,
     "turnover_mln": 75.00000000000001,
     "wa_price": 122.1562,
-    "wa_yield": 10.789399999999999
+    "wa_yield": 10.789399999999999,
+    "wa_clean": 120.71056666666667
    },
    {
     "term": 20,
     "deals": 2,
     "turnover_mln": 15155.000000000002,
     "wa_price": 141.1963840646651,
-    "wa_yield": 10.669071461563838
+    "wa_yield": 10.669071461563838,
+    "wa_clean": 134.02590824810292
    },
    {
     "term": 25,
     "deals": 4,
     "turnover_mln": 626.0,
     "wa_price": 103.41874121405752,
-    "wa_yield": 14.796799361022362
+    "wa_yield": 14.796799361022362,
+    "wa_clean": 100.76002651757189
    }
   ],
   "total_turnover_mln": 15856.000000000002,
   "total_deals": 8,
   "wa_price": 139.6148491107467,
   "wa_yield": 10.832604654389502,
+  "wa_clean": 132.64957798940463,
   "face_value_bn": 15.86,
   "transaction_value_bn": 22.14,
   "corporate_note": "There was no activity in the Corporate Bonds segment.",

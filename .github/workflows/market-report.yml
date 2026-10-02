@@ -30,6 +30,11 @@ concurrency:
   group: market-report
   cancel-in-progress: false
 
+env:
+  PLAYWRIGHT_VERSION: "1.63.0"
+  # secrets are not readable in step-level `if:`; expose their presence here instead
+  HAS_SMTP: ${{ secrets.REPORT_SMTP_HOST != '' && secrets.REPORT_EMAIL_TO != '' }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -38,7 +43,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
-          fetch-depth: 0   # full history so the rebase-before-push below always works
+          fetch-depth: 1
 
       - uses: actions/setup-python@v5
         with:
@@ -46,39 +51,62 @@ jobs:
           cache: pip
           cache-dependency-path: scripts/requirements.txt
 
-      - name: Install dependencies
+      - name: Install Python dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Cache Playwright's Chromium
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ env.PLAYWRIGHT_VERSION }}
+
+      - name: Install Chromium
         run: |
-          pip install -r scripts/requirements.txt
-          python -m playwright install --with-deps chromium
+          if [ "${{ steps.pw-cache.outputs.cache-hit }}" = "true" ]; then
+            python -m playwright install-deps chromium
+          else
+            python -m playwright install --with-deps chromium
+          fi
 
       - name: Build the report
         id: build
         env:
           TZ: Africa/Dar_es_Salaam
+          INPUT_DATE: ${{ inputs.date }}
+          INPUT_FORCE: ${{ inputs.force }}
         run: |
-          ARGS="--date ${{ github.event.inputs.date || 'auto' }}"
-          if [ "${{ github.event.inputs.force }}" = "true" ]; then ARGS="$ARGS --force"; fi
-          python -m scripts.market_report.build $ARGS
+          ARGS=(--date "${INPUT_DATE:-auto}")
+          if [ "${INPUT_FORCE}" = "true" ]; then ARGS+=(--force); fi
+          python -m scripts.market_report.build "${ARGS[@]}"
 
       - name: Commit and publish
+        id: publish
         if: steps.build.outputs.built == 'true'
         run: |
+          set -euo pipefail
           git config user.name "the-ticker-bot"
           git config user.email "the-ticker-bot@users.noreply.github.com"
-          git add market-report
+          git add -A market-report
           if git diff --cached --quiet; then
             echo "nothing changed"; exit 0
           fi
           git commit -m "market report ${{ steps.build.outputs.date }} (${{ steps.build.outputs.summary }})"
-          # another run may have pushed in between: rebase onto the latest main and retry
+          ok=0
           for i in 1 2 3; do
-            git pull --rebase origin main && git push origin HEAD:main && break
-            sleep $((i * 10))
+            # another run may have pushed in between: rebase onto the latest main and retry
+            if git pull --rebase origin main && git push origin HEAD:main; then ok=1; break; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((i * 15))
           done
+          if [ "$ok" != "1" ]; then
+            echo "::error::could not push the report to main after 3 attempts"; exit 1
+          fi
 
-      - name: E-mail the report (only if SMTP secrets are configured)
-        if: steps.build.outputs.built == 'true' && steps.build.outputs.complete == 'true' && env.REPORT_SMTP_HOST != ''
+      - name: E-mail the report (only when the SMTP secrets are configured)
+        if: env.HAS_SMTP == 'true' && steps.publish.outcome == 'success' && steps.build.outputs.complete == 'true' && steps.build.outputs.pdf == 'true'
         env:
+          REPORT_DATE: ${{ steps.build.outputs.date }}
           REPORT_SMTP_HOST: ${{ secrets.REPORT_SMTP_HOST }}
           REPORT_SMTP_PORT: ${{ secrets.REPORT_SMTP_PORT }}
           REPORT_SMTP_USER: ${{ secrets.REPORT_SMTP_USER }}
@@ -87,13 +115,13 @@ jobs:
           REPORT_EMAIL_TO: ${{ secrets.REPORT_EMAIL_TO }}
         run: python -m scripts.market_report.emailer
 
-      - name: Keep the build log as an artifact
+      - name: Keep the day's dataset and state as a run artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: market-report-${{ steps.build.outputs.date || 'run' }}-${{ github.run_id }}
+          name: market-report-${{ steps.build.outputs.date || 'run' }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             market-report/data/state.json
-            market-report/latest.pdf
+            market-report/data/${{ steps.build.outputs.date }}.json
           if-no-files-found: ignore
           retention-days: 14

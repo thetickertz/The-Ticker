@@ -10,8 +10,13 @@ FONT = "font-family:var(--mono);"
 
 
 def _t(x, y, txt, size=11, anchor="start", cls="", fill="var(--muted)", weight=500):
+    c = f' class="{cls}"' if cls else ""
     return (f'<text x="{x:.1f}" y="{y:.1f}" font-size="{size}" text-anchor="{anchor}" fill="{fill}" '
-            f'font-weight="{weight}" style="{FONT}" class="{cls}">{escape(str(txt))}</text>')
+            f'font-weight="{weight}" style="{FONT}"{c}>{escape(str(txt))}</text>')
+
+
+def _title(aria: str, desc: str) -> str:
+    return f"<title>{escape(aria)}</title><desc>{escape(desc)}</desc>"
 
 
 def share_bars(items: list[tuple[str, float, str]], width=600, bar_h=18, gap=10, label_w=86, value_w=170) -> str:
@@ -45,7 +50,9 @@ def grouped_columns(groups: list[tuple[str, list[float | None]]], series: list[s
     P = {"t": 22, "r": 10, "b": 30, "l": 36}
     pw, ph = width - P["l"] - P["r"], height - P["t"] - P["b"]
     ng, ns = len(groups), len(series)
-    out = [f'<svg viewBox="0 0 {width} {height}" width="100%" role="img" aria-label="{escape(aria)}" style="display:block;max-width:{width}px">']
+    desc = "; ".join(f"{g}: " + ", ".join(f"{s_} {fnum(v,1)}{unit}" for s_, v in zip(series, vals) if v is not None) for g, vals in groups)
+    out = [f'<svg viewBox="0 0 {width} {height}" width="100%" role="img" aria-label="{escape(aria)}" style="display:block;max-width:{width}px">',
+           _title(aria, desc)]
     # grid
     steps = 4
     for k in range(steps + 1):
@@ -54,15 +61,16 @@ def grouped_columns(groups: list[tuple[str, list[float | None]]], series: list[s
         out.append(f'<line x1="{P["l"]}" x2="{width-P["r"]}" y1="{y:.1f}" y2="{y:.1f}" stroke="var(--grid)" stroke-width="1"/>')
         out.append(_t(P["l"] - 6, y + 3.5, f"{v:.0f}{unit}", 10, "end"))
     slot = pw / ng
-    bw = min(26.0, slot * 0.7 / ns)
+    gap = 12  # wide enough that two value labels never collide
+    bw = min(26.0, (slot * 0.7 - gap * (ns - 1)) / ns)
     for gi, (glabel, vals) in enumerate(groups):
         gx = P["l"] + slot * gi + slot / 2
-        total_w = bw * ns + 2 * (ns - 1)
+        total_w = bw * ns + gap * (ns - 1)
         x0 = gx - total_w / 2
         for si, v in enumerate(vals):
             if v is None:
                 continue
-            x = x0 + si * (bw + 2)
+            x = x0 + si * (bw + gap)
             hgt = ph * (v / ymax)
             y = P["t"] + ph - hgt
             fill = colors[si % len(colors)]
@@ -81,14 +89,15 @@ def tenor_columns(by_term: list[dict], key: str, unit: str, dp: int, width=360, 
     P = {"t": 24, "r": 10, "b": 34, "l": 40}
     pw, ph = width - P["l"] - P["r"], height - P["t"] - P["b"]
     vals = [b.get(key) for b in by_term]
-    present = [v for v in vals if v is not None]
+    present = [v for v in vals if v]  # 0.0 is 'no trade' for a price or a yield
     if not present:
-        return f'<div class="empty">No bond trades today</div>'
+        return '<div class="empty">No bond trades in this session</div>'
     vmax = max(present)
-    vmin = min(present)
     # zero-based axis for price and yield so bar length is honest
-    lo, hi = 0.0, vmax * 1.15
-    out = [f'<svg viewBox="0 0 {width} {height}" width="100%" role="img" aria-label="{escape(aria)}" style="display:block;max-width:{width}px">']
+    lo, hi = 0.0, max(vmax, 1e-9) * 1.15
+    desc = ", ".join(f"{b['term']}-year {fnum(b.get(key), dp)}{unit}" for b in by_term if b.get(key))
+    out = [f'<svg viewBox="0 0 {width} {height}" width="100%" role="img" aria-label="{escape(aria)}" style="display:block;max-width:{width}px">',
+           _title(aria, desc)]
     steps = 4
     import math
     raw = hi / steps
@@ -105,10 +114,10 @@ def tenor_columns(by_term: list[dict], key: str, unit: str, dp: int, width=360, 
     bw = min(24.0, slot * 0.55)
     for i, b in enumerate(by_term):
         x = P["l"] + slot * i + slot / 2
-        val = b.get(key)
+        val = b.get(key) or None
         if val is None:
-            out.append(_t(x, P["t"] + ph - 6, "no", 9, "middle", fill="var(--muted)"))
-            out.append(_t(x, P["t"] + ph + 4, "trades", 9, "middle", fill="var(--muted)"))
+            out.append(_t(x, P["t"] + ph - 15, "no", 9, "middle", fill="var(--muted)"))
+            out.append(_t(x, P["t"] + ph - 5, "trades", 9, "middle", fill="var(--muted)"))
         else:
             hgt = ph * (val / hi)
             y = P["t"] + ph - hgt

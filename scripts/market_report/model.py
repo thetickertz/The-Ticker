@@ -51,11 +51,14 @@ class Builder:
         changed = False
         for r in rows:
             c = r["code"]
-            if c not in ys or not isinstance(ys[c], dict):
+            if c not in ys or not isinstance(ys[c], dict) or ys[c].get("price") is None:
                 try:
                     got = self.dse.closing_price_on_or_before(c, date(year - 1, 12, 31))
-                    ys[c] = {"price": got[0], "date": got[1], "shares": got[2]} if got else {"price": None}
-                    changed = True
+                    if got and got[0]:
+                        ys[c] = {"price": got[0], "date": got[1], "shares": got[2]}
+                        changed = True
+                    else:
+                        ys.pop(c, None)  # not cached: retried on the next build
                 except Exception as e:  # noqa: BLE001
                     self.log(f"year-start price {c}: {e}")
         if changed:
@@ -88,25 +91,32 @@ class Builder:
         return out
 
     def _split_factor(self, code: str, since: date, shares_then, shares_now) -> float:
-        """A genuine split shows as a one-day price step of ~n× AND more shares in issue now than at
-        the year start (a rights or bonus issue changes the share count without the price step;
-        an illiquid counter can jump in price without any change in shares). The feed's daily
-        share counts flicker, so the share test uses the year-start and current figures only."""
+        """Size a split from the change in shares in issue (year start vs now), and accept it only
+        if the price series shows a one-day step of the same size. A rights or bonus issue changes
+        the share count without the price step; an illiquid counter can jump without any change in
+        shares; a bad tick that reverts the next day is ignored because the share ratio does not
+        support it. Never compounds: one corporate action per year is sized once."""
+        if not (shares_then and shares_now):
+            return 1.0
+        ratio = shares_now / shares_then
+        if ratio >= 1.5:
+            n = round(ratio)
+            if n < 2 or abs(ratio - n) / n > 0.1:
+                return 1.0
+            want = n  # price should have fallen to ~1/n on one day
+        elif ratio <= 1 / 1.5:
+            n = round(1 / ratio)
+            if n < 2 or abs(1 / ratio - n) / n > 0.1:
+                return 1.0
+            want = 1.0 / n  # consolidation: price rose n× on one day
+        else:
+            return 1.0
         rows = [r for r in self.dse.price_series(code, 400) if r["date"] > iso(since) and r["close"]]
-        more_shares = bool(shares_then and shares_now and shares_now > shares_then * 1.5)
-        fewer_shares = bool(shares_then and shares_now and shares_then > shares_now * 1.5)
-        factor = 1.0
         for a, b in zip(rows, rows[1:]):
-            ratio = a["close"] / b["close"] if b["close"] else 0
-            if ratio >= 1.7 and more_shares:  # price fell to roughly 1/n
-                n = round(ratio)
-                if n >= 2 and abs(ratio - n) / n <= 0.2:
-                    factor *= n
-            elif 0 < ratio <= 1 / 1.7 and fewer_shares:  # consolidation: price rose n×
-                n = round(1 / ratio)
-                if n >= 2 and abs(1 / ratio - n) / n <= 0.2:
-                    factor /= n
-        return factor
+            step = a["close"] / b["close"] if b["close"] else 0
+            if step and abs(step / want - 1) <= 0.25:
+                return float(want)
+        return 1.0
 
     def previous_trading_day(self, d: date) -> tuple[date, list[dict]]:
         """Walk back until the API returns rows actually dated before d."""
@@ -189,6 +199,13 @@ class Builder:
                                "high": rr["high"], "low": rr["low"], "prev_close": rr["prev_close"], "change_pct": None,
                                "turnover": rr["turnover"], "volume": rr["volume"], "shares_in_issue": None,
                                "market_cap": (rr["market_cap_bn"] or 0.0) * 1e9, "from_report": True})
+        if report is None and prev_snapshot:
+            for pe_ in prev_snapshot.get("equities") or []:
+                if pe_["code"] not in api_codes and pe_["code"] not in rep_rows:
+                    eq_api.append({"code": pe_["code"], "trade_date": iso(d), "open": pe_["close"], "close": pe_["close"],
+                                   "high": None, "low": None, "prev_close": pe_["close"], "change_pct": 0.0, "turnover": 0.0,
+                                   "volume": 0.0, "shares_in_issue": pe_.get("shares_in_issue"),
+                                   "market_cap": (pe_.get("market_cap_bn") or 0.0) * 1e9, "from_report": True})
         year = d.year
         ys = self.year_start_prices(year, eq_api)
         prev_map = {r["code"]: r for r in eq_prev}
@@ -198,8 +215,10 @@ class Builder:
             try:
                 for rd, url in self.dse.daily_report_links():
                     if rd == prev_d:
-                        prev_report = parse_report(self.dse.fetch_report_lines(url))
-                        log("previous-day exchange report parsed for comparisons")
+                        cand = parse_report(self.dse.fetch_report_lines(url))
+                        if cand.get("report_date") == prev_d:
+                            prev_report = cand
+                            log("previous-day exchange report parsed for comparisons")
                         break
             except Exception as e:  # noqa: BLE001
                 self.notes.append(f"previous-day exchange report not read ({e})")
@@ -259,6 +278,19 @@ class Builder:
             if rt.get("turnover") and abs(rt["turnover"] - tot["turnover"]) / rt["turnover"] > 0.005:
                 self.notes.append("Equity turnover in the DSE feed and the DSE Market Report differ slightly; the report's figure is shown.")
                 tot["turnover"], tot["volume"], tot["deals"] = rt["turnover"], rt["volume"], int(rt["deals"])
+            if rt.get("market_cap_bn") and tot["market_cap_bn"] and abs(rt["market_cap_bn"] / tot["market_cap_bn"] - 1) > 0.005:
+                self.notes.append(f"Market capitalisation from the DSE feed ({tot['market_cap_bn']:,.1f} bn) and the DSE Market Report "
+                                  f"({rt['market_cap_bn']:,.1f} bn) differ; the report's figure is shown.")
+                tot["domestic_cap_bn"] = tot["domestic_cap_bn"] * rt["market_cap_bn"] / tot["market_cap_bn"]
+                tot["market_cap_bn"] = rt["market_cap_bn"]
+        if report:
+            if not report["equities"].get("rows"):
+                self.notes.append("The DSE Market Report was found but its equity table could not be read; deals, bids and offers come from the price feed where available.")
+            if not report.get("participation", {}).get("equity"):
+                self.notes.append("The DSE Market Report was found but its foreign/local participation table could not be read.")
+            if (report.get("headline") or "").find("from bonds traded") >= 0 and not report["bond_trades"].get("rows") \
+                    and "0 deals" not in (report.get("headline") or ""):
+                self.notes.append("The DSE Market Report mentions bond trades but its bond table could not be read.")
 
         # ── ETFs ───────────────────────────────────────────────────
         etf_rows = (report or {}).get("etfs", {}).get("rows", [])
@@ -275,10 +307,6 @@ class Builder:
             etf_cap_prev = prev_snapshot.get("market_caps", {}).get("etf", {}).get("today")
         if etf_cap_prev is None and prev_report and (prev_report.get("etfs") or {}).get("total"):
             etf_cap_prev = prev_report["etfs"]["total"].get("market_cap_bn")
-        if etf_cap_prev is None and report and report.get("indicator_columns") and len(report["indicator_columns"]) > 1 \
-                and report["indicator_columns"][1] == prev_d:
-            v = report.get("indicators", {}).get("ETF Market Capitalisation (TZS bln)") or []
-            etf_cap_prev = v[1] if len(v) > 1 else None
         if not etf_rows:
             # fallback: price/volume from the per-security summary, no turnover breakdown
             for code, r in summ.items():
@@ -301,35 +329,53 @@ class Builder:
                             "change_pct": pct_change(t["close"], prev_close)})
 
         # ── bonds traded, grouped by tenor ────────────────────────
-        trades = (report or {}).get("bond_trades", {}).get("rows", [])
+        all_trades = (report or {}).get("bond_trades", {}).get("rows", [])
+        # The exchange's table mixes Treasury bonds (numeric bond numbers) with infrastructure/corporate
+        # lines such as 'SAMIA-25/30.T1'; only the Treasury rows belong in the by-term table.
+        trades = [tr for tr in all_trades if str(tr.get("bond_no", "")).isdigit()]
+        other_bonds = [tr for tr in all_trades if not str(tr.get("bond_no", "")).isdigit()]
         by_term = {}
         for tr in trades:
             term = int(tr["term"]) if tr.get("term") else None
-            g = by_term.setdefault(term, {"term": term, "deals": 0, "amount_bn": 0.0, "px": 0.0, "yl": 0.0, "n": 0})
+            g = by_term.setdefault(term, {"term": term, "deals": 0, "amount_bn": 0.0, "px": 0.0, "px_w": 0.0, "yl": 0.0, "yl_w": 0.0,
+                                          "cl": 0.0, "cl_w": 0.0})
             amt = tr.get("amount_bn") or 0.0
             g["deals"] += int(tr.get("deals") or 1)
             g["amount_bn"] += amt
-            g["px"] += (tr.get("price") or 0.0) * amt
-            g["yl"] += (tr.get("yield") or 0.0) * amt
-            g["n"] += 1
+            if tr.get("price") is not None:
+                g["px"] += tr["price"] * amt
+                g["px_w"] += amt
+            if tr.get("yield") is not None:
+                g["yl"] += tr["yield"] * amt
+                g["yl_w"] += amt
+            if tr.get("clean_price") is not None:
+                g["cl"] += tr["clean_price"] * amt
+                g["cl_w"] += amt
+
+        def _row(g):
+            return {"term": g["term"], "deals": g["deals"], "turnover_mln": g["amount_bn"] * 1000.0,
+                    "wa_price": (g["px"] / g["px_w"]) if g["px_w"] else None,
+                    "wa_yield": (g["yl"] / g["yl_w"]) if g["yl_w"] else None,
+                    "wa_clean": (g["cl"] / g["cl_w"]) if g["cl_w"] else None}
         bonds_by_term = []
         for term in TENORS:
             g = by_term.get(term)
             if g and g["amount_bn"] > 0:
-                bonds_by_term.append({"term": term, "deals": g["deals"], "turnover_mln": g["amount_bn"] * 1000.0,
-                                      "wa_price": g["px"] / g["amount_bn"], "wa_yield": g["yl"] / g["amount_bn"]})
+                bonds_by_term.append(_row(g))
             else:
-                bonds_by_term.append({"term": term, "deals": 0, "turnover_mln": 0.0, "wa_price": None, "wa_yield": None})
-        other_terms = [g for t, g in by_term.items() if t not in TENORS and g["amount_bn"] > 0]
-        for g in other_terms:
-            bonds_by_term.append({"term": g["term"], "deals": g["deals"], "turnover_mln": g["amount_bn"] * 1000.0,
-                                  "wa_price": g["px"] / g["amount_bn"], "wa_yield": g["yl"] / g["amount_bn"]})
+                bonds_by_term.append({"term": term, "deals": 0, "turnover_mln": 0.0, "wa_price": None, "wa_yield": None, "wa_clean": None})
+        for t_, g in by_term.items():
+            if t_ not in TENORS and g["amount_bn"] > 0:
+                bonds_by_term.append(_row(g))
         total_amt = sum(b["turnover_mln"] for b in bonds_by_term)
+
+        def _wavg(key):
+            w = sum(b["turnover_mln"] for b in bonds_by_term if b.get(key) is not None)
+            return (sum(b[key] * b["turnover_mln"] for b in bonds_by_term if b.get(key) is not None) / w) if w else None
         bonds = {
-            "trades": trades, "by_term": bonds_by_term,
+            "trades": trades, "other_bonds": other_bonds, "by_term": bonds_by_term,
             "total_turnover_mln": total_amt, "total_deals": sum(b["deals"] for b in bonds_by_term),
-            "wa_price": (sum((b["wa_price"] or 0) * b["turnover_mln"] for b in bonds_by_term) / total_amt) if total_amt else None,
-            "wa_yield": (sum((b["wa_yield"] or 0) * b["turnover_mln"] for b in bonds_by_term) / total_amt) if total_amt else None,
+            "wa_price": _wavg("wa_price"), "wa_yield": _wavg("wa_yield"), "wa_clean": _wavg("wa_clean"),
             "face_value_bn": (report or {}).get("gov_bonds_value_bn", {}).get("face") if report else None,
             "transaction_value_bn": (report or {}).get("gov_bonds_value_bn", {}).get("transaction") if report else None,
             "corporate_note": (report or {}).get("corporate_bonds_note") if report else None,
@@ -353,8 +399,7 @@ class Builder:
         if report:
             for k, v in report.get("indicators", {}).items():
                 if k.startswith("TZS/") and v:
-                    fx[k.split(" ")[0]] = {"today": v[0],
-                                           "prev": v[1] if (len(v) > 1 and report.get("indicator_columns", [None, None])[1] == prev_d) else None}
+                    fx[k.split(" ")[0]] = {"today": v[0], "prev": None}
 
         # ── movers / gainers / losers ─────────────────────────────
         traded = [e for e in equities if (e["turnover"] or 0) > 0]
@@ -364,12 +409,17 @@ class Builder:
                   for e in top]
         if others > 0 and len(traded) > len(top):
             movers.append({"code": "Others", "turnover": others, "share_pct": others / tot["turnover"] * 100 if tot["turnover"] else 0})
-        moved = [e for e in equities if e["change_pct"] not in (None, 0)]
-        gainers = sorted([e for e in moved if e["change_pct"] > 0], key=lambda e: -e["change_pct"])[:3]
-        losers = sorted([e for e in moved if e["change_pct"] < 0], key=lambda e: e["change_pct"])[:3]
+        # price moves only count when the counter actually traded here; cross-listed counters are
+        # repriced from Nairobi even with no DSE deal, which would otherwise pollute breadth and the
+        # gainers/losers lists
+        traded_set = {e["code"] for e in traded}
+        moved = [e for e in equities if e["change_pct"] not in (None, 0) and e["code"] in traded_set]
+        cross_moves = [e for e in equities if e["change_pct"] not in (None, 0) and e["code"] not in traded_set]
+        gainers = sorted([e for e in moved if e["change_pct"] > 0], key=lambda e: (-round(e["change_pct"], 4), -e["turnover"]))[:3]
+        losers = sorted([e for e in moved if e["change_pct"] < 0], key=lambda e: (round(e["change_pct"], 4), -e["turnover"]))[:3]
         advancers = sum(1 for e in moved if e["change_pct"] > 0)
         decliners = sum(1 for e in moved if e["change_pct"] < 0)
-        unchanged = len(equities) - advancers - decliners
+        unchanged = len(traded) - advancers - decliners
 
         # ── other sources ─────────────────────────────────────────
         auctions = bot_mod.auctions(self.http)
@@ -396,7 +446,9 @@ class Builder:
                         "cis": sorted({f["source"] for f in cis["funds"]})},
             "headline": (report or {}).get("headline"), "block_trades": (report or {}).get("block_trades"),
             "equities": equities, "totals": tot, "prev_totals": prev_tot,
-            "breadth": {"advancers": advancers, "decliners": decliners, "unchanged": unchanged, "traded": len(traded)},
+            "breadth": {"advancers": advancers, "decliners": decliners, "unchanged": unchanged, "traded": len(traded),
+                        "not_traded": len(equities) - len(traded)},
+            "cross_moves": [{"code": e["code"], "change_pct": e["change_pct"]} for e in cross_moves],
             "indices": indices, "market_caps": market_caps, "outstanding": outstanding, "fx": fx,
             "participation": (report or {}).get("participation", {}),
             "movers": movers, "gainers": gainers, "losers": losers,
@@ -431,9 +483,16 @@ class Builder:
                     td = parse_iso(rows[0]["trade_date"]) if rows else None
                     if td and td == probe:
                         idx = {r["code"]: r["close"] for r in self.dse.indices(probe)}
-                        hist[iso(probe)] = {"date": iso(probe), "turnover": _sum(rows, "turnover"),
-                                            "volume": _sum(rows, "volume"), "market_cap_bn": _sum(rows, "market_cap") / 1e9,
-                                            "dsei": idx.get("DSEI"), "tsi": idx.get("TSI")}
+                        point = {"date": iso(probe), "turnover": _sum(rows, "turnover"),
+                                 "volume": _sum(rows, "volume"), "market_cap_bn": _sum(rows, "market_cap") / 1e9,
+                                 "dsei": idx.get("DSEI"), "tsi": idx.get("TSI")}
+                        # the feed occasionally returns a corrupt day (e.g. a 3× market cap); compare with the
+                        # nearest later point we already hold and drop implausible jumps
+                        later = next((hist[k] for k in sorted(hist) if k > iso(probe)), None)
+                        if later and later.get("market_cap_bn") and point["market_cap_bn"] and \
+                                abs(point["market_cap_bn"] / later["market_cap_bn"] - 1) > 0.25:
+                            point["market_cap_bn"] = None
+                        hist[iso(probe)] = point
                         got += 1
                     elif td and td < probe:
                         probe = td  # jump straight to the last trading day

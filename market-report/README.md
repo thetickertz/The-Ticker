@@ -6,7 +6,7 @@ written so a first-time investor can follow it. **It is produced entirely by cod
 nobody (and no AI model) is in the loop on a normal day.**
 
 Live page: <https://thetickertz.github.io/The-Ticker/market-report/> · archive at `archive/`
-· PDF at `latest.pdf`.
+(each day's page has a *Download PDF* button).
 
 ## What is in the report
 
@@ -14,12 +14,12 @@ Live page: <https://thetickertz.github.io/The-Ticker/market-report/> · archive 
 |---|---|---|
 | Today in one minute, key numbers tape, trend tiles | DSE JSON feed + 30-day history we keep in `data/history.json` | Rule-based sentences generated from the numbers |
 | Key market indicators (turnover, volume, deals, market caps, five indices) today vs previous session | DSE JSON feed (`/api/get/market/prices/for/range`, `/get/last/traded/indices`) | Market caps are summed per counter; domestic = excluding the six cross-listed counters; ETF cap from the DSE Market Report |
-| Top movers (share of turnover), top three gainers and losers | DSE JSON feed | Change = close vs previous close, as the exchange reports it |
+| Top movers (share of turnover), top three gainers and losers, breadth | DSE JSON feed | Change = close vs previous close, as the exchange reports it; only counters that actually traded on the DSE count (cross-listed counters repriced from Nairobi with no local deal are listed separately) |
 | Foreign vs local participation (equities and ETFs), net foreign flow | **DSE Market Report** of the day (the PDF the exchange posts on its homepage, served as HTML) | Parsed from the "Equities/ETF Market Turnover" tables |
-| Bonds traded by term: deals, turnover, weighted-average price and yield | DSE Market Report "Daily Price Information" table | Weighted by face value traded |
-| Latest Treasury bond and Treasury bill auction | Bank of Tanzania (`/TBonds/AuctionSummaries`, `/Tbills/getTbillsDetails`) | Bid-to-cover = tendered ÷ offered |
+| Bonds traded by term: deals, turnover, weighted-average price, clean price and yield | DSE Market Report "Daily Price Information" table | Weighted by face value traded; Treasury bonds only (numeric bond numbers) — infrastructure/corporate lines are listed separately |
+| Latest Treasury bond and Treasury bill auction | Bank of Tanzania (`/TBonds/AuctionSummaries`, `/Tbills/getTbillsDetails`) | Bid-to-cover = tendered ÷ offered; BOT auction prices are clean prices |
 | Unit trusts (NAV, daily, YTD, annualised) | UTT AMIS (6 funds), Orbit Securities (Inuka ×2), Watumishi Housing (Faida) | YTD vs last valuation of the previous year; annualised = YTD × 365 ÷ days elapsed |
-| Full equities table (prev close, close, change, year start, YTD, turnover, deals, bids, offers, volume, market cap) and ETFs | DSE JSON feed + DSE Market Report (bids/offers) + cached year-start prices | Year-start price = last close of the previous year, fetched once per counter per year |
+| Full equities table (prev close, close, change, year start, YTD, turnover, deals, bids, offers, volume, market cap) and ETFs | DSE JSON feed + DSE Market Report (bids/offers, suspended counters) + cached year-start prices | Year-start price = last close of the previous year, adjusted for a share split when the share count changed by an integer ratio *and* the price stepped by the same ratio on one day (NMB 10-for-1 in 2026) |
 | Glossary, sources, disclaimer | static | — |
 
 Everything in the report is traceable: `data/YYYY-MM-DD.json` holds the exact parsed dataset
@@ -32,13 +32,19 @@ for each day, and the footer links to the official publications.
 
 1. asks the DSE for its last trading day;
 2. skips if that day was already built from the full DSE Market Report (so the extra slots cost nothing);
-3. otherwise fetches everything, writes `index.html`, `archive/<date>.html`, `archive/<date>.pdf`,
-   `latest.pdf`, `data/<date>.json`, and updates `archive/index.html`;
-4. commits to `main`, which GitHub Pages publishes within a minute or two.
+3. otherwise fetches everything, writes `archive/<date>.html`, `data/<date>.json`, the PDF (only once the
+   exchange's own Market Report is available, so a day is committed with at most one PDF), updates
+   `archive/index.html`, and rewrites `index.html` when the day is the newest one;
+4. also re-checks the last few days for a partial build whose Market Report has since appeared and
+   completes it (archive only, the live page is never regressed to an older day);
+5. commits to `main`, which GitHub Pages publishes within a minute or two. A failed push fails the job.
 
 If the exchange has not yet posted its Market Report when a run happens, the page is still
 built from the JSON feed (all prices, indices, movers, auctions and funds), with a note that
-participation and bond-trade details will be filled in; the next scheduled run completes it.
+participation and bond-trade details will be filled in; a later run completes it. In `auto` mode
+nothing is built before 16:00 EAT on the trading day itself, so an intraday snapshot is never published.
+A transient source outage leaves the previous report in place and the job green; the job turns red only
+if the published report falls more than four days behind.
 
 Manual run: **Actions → "DSE daily market report" → Run workflow** (optionally with a date and
 *force*). Locally:
@@ -51,8 +57,8 @@ python -m scripts.market_report.build --date 2026-10-01 --force --no-pdf
 
 ## Optional: e-mail distribution
 
-Add these repository secrets and every *complete* build is e-mailed with the PDF attached and the
-one-minute summary in the body: `REPORT_SMTP_HOST`, `REPORT_SMTP_PORT` (587), `REPORT_SMTP_USER`,
+Add these repository secrets and every *complete* build that produced a PDF is e-mailed with the PDF
+attached and the one-minute summary in the body: `REPORT_SMTP_HOST`, `REPORT_SMTP_PORT` (587), `REPORT_SMTP_USER`,
 `REPORT_SMTP_PASS`, `REPORT_EMAIL_FROM`, `REPORT_EMAIL_TO` (comma-separated). Without them the step
 is skipped. (Gmail works with an app password; Microsoft 365 with SMTP AUTH enabled.)
 
@@ -81,7 +87,11 @@ is skipped. (Gmail works with an app password; Microsoft 365 with SMTP AUTH enab
   was skipped; fix `parse_report()` in `dse.py` and re-run with `--force`.
 - **Holidays.** The build keys off the DSE's own last-trading-day endpoint, so public holidays need no
   calendar.
-- **Repository size.** Each day adds roughly 400 KB (HTML + JSON + PDF). PDFs older than a year are
-  pruned automatically (`--keep-pdf-days`, default 366); the HTML page and JSON dataset for every day are
-  kept, so the archive stays complete.
+- **Repository size.** Each complete day adds roughly 400 KB to the working tree (HTML + JSON + one PDF),
+  and because git keeps history the repository itself grows by about that much per trading day
+  (~100 MB a year). PDFs older than a year are removed from the working tree (`--keep-pdf-days`, default
+  366) and their pages re-rendered without the download button; the HTML page and JSON dataset for every
+  day are kept, so the archive stays complete. If the history ever becomes a burden, move the PDFs to a
+  release asset or an object store — the pipeline only needs `archive/<date>.pdf` to exist when it writes
+  the button.
 - **Branding/narrative changes.** Text templates live in `narrative.py`; layout and CSS in `render.py`.

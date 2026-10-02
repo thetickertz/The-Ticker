@@ -23,7 +23,8 @@ CSS = r"""
   --maxw:1120px; --r:10px;
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:no-preference){ html{scroll-behavior:smooth} }
+.sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0}
 body{background:var(--page); color:var(--ink); font-family:var(--sans); font-size:15px; line-height:1.55; margin:0; -webkit-font-smoothing:antialiased}
 a{color:var(--s1)}
 .mast{background:linear-gradient(160deg,var(--mast2) 0%,var(--mast) 70%); color:var(--mast-ink)}
@@ -54,14 +55,20 @@ a{color:var(--s1)}
 .nav a{color:var(--mast-ink2); text-decoration:none; font-size:13px; font-weight:500; padding:11px 12px; white-space:nowrap; border-bottom:2px solid transparent}
 .nav a:hover{color:var(--mast-ink)} .nav a.tool{color:var(--mast-ink); font-weight:600}
 main{max-width:var(--maxw); margin:0 auto; padding:10px 24px 50px}
-main > section{border-top:2px solid rgba(59,42,28,.18); margin-top:40px; padding-top:30px}
+main > section{border-top:2px solid rgba(59,42,28,.18); margin-top:40px; padding-top:30px; scroll-margin-top:56px}
 main > section:first-of-type{border-top:0; margin-top:0; padding-top:28px}
 .sec-head{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:6px}
 .sec-head h2{font-size:23px; font-weight:700; letter-spacing:-.01em; margin:0}
 .sec-head .kicker{font-family:var(--mono); font-size:11px; letter-spacing:.14em; color:var(--muted); text-transform:uppercase}
 .sec-lede{color:var(--ink2); max-width:72ch; margin:0 0 18px}
 .sec-lede b, .plain b, .bullets b{color:var(--ink); font-weight:600}
-.grid{display:grid; gap:14px}
+.grid{display:grid; gap:14px} .grid > *, .two > *, .pair > *{min-width:0}
+.pair{display:grid; gap:14px}
+.tape-wrap{position:relative} .tape-pause{position:absolute; right:8px; top:6px; z-index:2; font-family:var(--mono); font-size:11px; color:var(--mast-ink); background:rgba(36,26,17,.85); border:1px solid var(--mast-border); border-radius:999px; padding:3px 10px; cursor:pointer}
+.tape.paused .tape-track{animation-play-state:paused}
+.sharebars{display:grid; grid-template-columns:auto 1fr auto; gap:8px 12px; align-items:center; font-family:var(--mono); font-size:12.5px; margin-top:6px}
+.sharebars .lb{font-weight:600; color:var(--ink)} .sharebars .bar{height:16px; border-radius:0 4px 4px 0; background:var(--s1-soft)} .sharebars .bar.top{background:var(--s1)} .sharebars .bar.other{background:var(--neutral)}
+.sharebars .vl{color:var(--ink2); white-space:nowrap}
 .grid.c4{grid-template-columns:repeat(4,1fr)} .grid.c3{grid-template-columns:repeat(3,1fr)} .grid.c2{grid-template-columns:repeat(2,1fr)}
 .grid.c2w{grid-template-columns:1.15fr 1fr}
 @media (max-width:900px){ .grid.c4{grid-template-columns:repeat(2,1fr)} .grid.c3{grid-template-columns:repeat(2,1fr)} .grid.c2w{grid-template-columns:1fr} }
@@ -134,6 +141,7 @@ footer a{color:var(--mast-ink2)} footer ul{margin:0; padding-left:18px} footer l
   .twrap{overflow:visible}
   .grid{gap:8px} .two{gap:8px}
   .grid.c2w{grid-template-columns:1.15fr 1fr} .two{grid-template-columns:1fr 1fr} .grid.c4{grid-template-columns:repeat(4,1fr)}
+  #bonds .grid.c2w{grid-template-columns:1fr} .pair{grid-template-columns:1fr 1fr} .tape-pause{display:none}
   .card{break-inside:auto} .card.tile, .chart-card, .auction, tr, .ts{break-inside:avoid}
   .tile .val{font-size:19px} .tile .val .delta{font-size:10px}
   section.pb{break-before:page}
@@ -155,10 +163,10 @@ GLOSSARY = [
     ("Volume", "The number of shares that changed hands."),
     ("Deal", "One completed transaction between a buyer and a seller."),
     ("Market capitalisation", "Shares in issue multiplied by the share price: what the whole company (or market) is worth at today's prices."),
-    ("DSEI", "The All Share Index — tracks the prices of every company listed on the DSE, including those cross-listed from Nairobi and Kampala."),
+    ("DSEI", "The All Share Index — tracks the prices of every company listed on the DSE, including the cross-listed Kenyan companies."),
     ("TSI", "The Tanzania Share Index — the same idea, Tanzanian companies only."),
     ("Index points", "An index is a weighted average of prices scaled to a starting value; only the percentage change day to day is meaningful."),
-    ("Cross-listed", "A company whose main listing is on another exchange (EABL, JHL, KA, KCB, NMG, USL). Their DSE prices move with Nairobi or Kampala and they trade here rarely."),
+    ("Cross-listed", "A company whose main listing is on the Nairobi Securities Exchange (marked ‡ in the table). Its DSE price follows its Nairobi close and it rarely trades here."),
     ("Bids and offers", "Orders waiting in the book at the close: bids want to buy, offers want to sell. Many more bids than offers suggests demand is waiting for sellers."),
     ("Block trade", "A large pre-arranged deal between two parties, crossed on the exchange's block board rather than in normal trading."),
     ("Foreign participation", "The share of buying and selling done by non-resident investors. A net inflow means foreigners bought more than they sold."),
@@ -166,36 +174,41 @@ GLOSSARY = [
     ("Treasury bond", "Government borrowing for 2 to 25 years that pays a fixed coupon twice a year. Sold at Bank of Tanzania auctions, then traded on the DSE."),
     ("Treasury bill", "Government borrowing for 35 to 364 days, sold below face value and repaid at face value; the discount is the interest."),
     ("Coupon", "The fixed annual interest a bond pays on its face value, set when the bond is first issued."),
-    ("Price per 100", "Bond prices are quoted per 100 of face value. Above 100 is a premium, below 100 a discount."),
+    ("Price per 100", "Bond prices are quoted per 100 of face value. Exchange prices include interest built up since the last coupon; the clean price strips it out, and a clean price above 100 is a premium, below 100 a discount."),
     ("Yield (to maturity)", "The annual return a buyer locks in at today's price if the bond is held to the end. Prices and yields move in opposite directions."),
     ("Weighted average price / yield", "The average of today's trades (or auction allocations), weighted by the amount of each — so one big deal counts for more than ten small ones."),
     ("Bid-to-cover", "Total bids divided by the amount offered at an auction. 2.6 times means investors wanted 2.6 shillings for every shilling on sale."),
     ("Unit trust / CIS", "A collective investment scheme that pools investors' money into one professionally managed fund; you own units of the fund."),
-    ("NAV per unit", "Net asset value per unit — the fund's assets minus liabilities, divided by the units in issue. The price at which units are bought and sold."),
+    ("NAV per unit", "Net asset value per unit — the fund's assets minus liabilities, divided by the units in issue. Managers set their buying and selling prices from it, sometimes with a small charge, so the price you pay may differ slightly."),
     ("YTD", "Year to date: the change since the last valuation of the previous year."),
     ("Annualised", "A year-to-date return stretched to a full 365 days so funds can be compared regardless of the date."),
 ]
 
 
-def _cls(v):
+def _cls(v, dp=2):
+    """Colour class from the value as it will be printed, so '0.0%' is never red or green."""
     if v is None:
         return "fl"
-    return "up" if v > 0.0001 else "dn" if v < -0.0001 else "fl"
+    r = round(v, dp)
+    return "up" if r > 0 else "dn" if r < 0 else "fl"
 
 
-def _tri(v):
-    return f'<span class="tri {_cls(v)}"></span>'
+def _tri(v, dp=2):
+    c = _cls(v, dp)
+    word = {"up": "up", "dn": "down", "fl": "unchanged"}[c]
+    return f'<span class="tri {c}"><span class="sr-only">{word}</span></span>'
 
 
 def _delta(v, dp=2, suffix="%"):
     if v is None:
         return '<span class="delta fl"><span class="tri fl"></span>n/a</span>'
-    return f'<span class="delta {_cls(v)}"><span class="tri {_cls(v)}"></span>{fpct(v, dp)}</span>' if suffix == "%" else \
-        f'<span class="delta {_cls(v)}"><span class="tri {_cls(v)}"></span>{v:+,.{dp}f}{suffix}</span>'
+    c = _cls(v, dp)
+    txt = fpct(v, dp) if suffix == "%" else f"{v:+,.{dp}f}{suffix}"
+    return f'<span class="delta {c}">{_tri(v, dp)}{txt}</span>'
 
 
 def _chg_td(v, dp=1):
-    return f'<td class="chg {_cls(v)}">{fpct(v, dp)}</td>'
+    return f'<td class="chg {_cls(v, dp)}">{fpct(v, dp)}</td>'
 
 
 def sec(id_, kicker, title, lede, extra_cls=""):
@@ -217,10 +230,22 @@ def chart_card(title, note, svg, legend_html=""):
 
 
 # ──────────────────────────────────────────────────────────────────────
+def _as_date(x):
+    return parse_iso(x) if isinstance(x, str) else x
+
+
 def render(ds: dict, archive: list[dict], rel: str = "", pdf_name: str | None = None) -> str:
+    # the dataset may come straight from the builder (date objects) or from data/*.json (strings)
+    for key in ("bond", "tbill"):
+        a_ = (ds.get("auctions") or {}).get(key)
+        if a_ and a_.get("date"):
+            a_["date"] = _as_date(a_["date"])
+    for f_ in ds.get("cis") or []:
+        if f_.get("date"):
+            f_["date"] = _as_date(f_["date"])
     d = parse_iso(ds["date"])
     pd_ = parse_iso(ds["prev_date"])
-    t, p = ds["totals"], ds["prev_totals"]
+    t, p = ds["totals"], ds.get("prev_totals") or {}
     idx = {i["code"]: i for i in ds["indices"]}
     pe = (ds.get("participation") or {}).get("equity") or {}
     hist = ds.get("history") or []
@@ -231,11 +256,12 @@ def render(ds: dict, archive: list[dict], rel: str = "", pdf_name: str | None = 
     for code in ("DSEI", "TSI"):
         if code in idx:
             tape.append((code, fnum(idx[code]["close"], 2), idx[code]["change_pct"]))
-    tape.append(("TURNOVER", tzs_compact(t["turnover"]).replace("TZS ", "TZS "), (t["turnover"] / p["turnover"] - 1) * 100 if p.get("turnover") else None))
+    tape.append(("TURNOVER", tzs_compact(t["turnover"]), (t["turnover"] / p["turnover"] - 1) * 100 if p.get("turnover") else None))
     if t.get("deals") is not None:
         tape.append(("DEALS", fnum(t["deals"]), None))
-    if pe.get("net_foreign_mln") is not None:
-        tape.append(("FOREIGN NET", ("+" if pe["net_foreign_mln"] >= 0 else "−") + tzs_compact(abs(pe["net_foreign_mln"]) * 1e6).replace("TZS ", ""), pe["net_foreign_mln"]))
+    net = pe.get("net_foreign_mln")
+    if net is not None:
+        tape.append(("FOREIGN NET", ("+" if net >= 0 else "−") + tzs_compact(abs(net) * 1e6).replace("TZS ", ""), net))
     if ds["bonds"]["available"]:
         tape.append(("BONDS TRADED", tzs_compact(ds["bonds"]["total_turnover_mln"] * 1e6).replace("TZS ", ""), None))
     for g in ds["gainers"][:2]:
@@ -253,7 +279,8 @@ def render(ds: dict, archive: list[dict], rel: str = "", pdf_name: str | None = 
     sp_turn = charts.sparkline([h.get("turnover") for h in hist]) if len(hist) > 2 else ""
     sp_dsei = charts.sparkline([h.get("dsei") for h in hist]) if len(hist) > 2 else ""
     sp_tsi = charts.sparkline([h.get("tsi") for h in hist]) if len(hist) > 2 else ""
-    turn_chg = (t["turnover"] / p["turnover"] - 1) * 100 if p.get("turnover") else None
+    turn_chg = (t["turnover"] / p["turnover"] - 1) * 100 if (p.get("turnover") and t.get("turnover") is not None) else None
+    flow = N.flow_state(pe)
     first_hist = next((h for h in hist if h.get("date")), None)
     span_txt = f"since {tiny_date(parse_iso(first_hist['date']))}" if first_hist and len(hist) > 2 else ""
     kpis = "".join([
@@ -263,14 +290,14 @@ def render(ds: dict, archive: list[dict], rel: str = "", pdf_name: str | None = 
              f"{span_txt} · 30-session trend" if span_txt else "", "Every listed company, weighted by size.", sp_dsei),
         tile("Tanzania Share Index (TSI)", fnum(idx["TSI"]["close"], 2) if "TSI" in idx else "—", "", _delta(idx["TSI"]["change_pct"]) if "TSI" in idx else "",
              f"{span_txt} · 30-session trend" if span_txt else "", "Tanzanian companies only.", sp_tsi),
-        tile("Foreign investors", ("+" if pe.get("net_foreign_mln", 0) >= 0 else "−") + f"{abs(pe.get('net_foreign_mln') or 0):,.1f}" if pe else "—", "TZS m net" if pe else "",
-             (f'<span class="delta {"up" if pe["net_foreign_mln"] > 50 else "dn" if pe["net_foreign_mln"] < -50 else "fl"}">'
-              f'{"net inflow" if pe["net_foreign_mln"] > 50 else "net outflow" if pe["net_foreign_mln"] < -50 else "balanced"}</span>') if pe and pe.get("net_foreign_mln") is not None else "",
-             (f"{fpct(pe['pct_buy_foreign'],0,False)} of buying · {fpct(pe['pct_sell_foreign'],0,False)} of selling" if pe else "awaiting DSE report"),
+        tile("Foreign investors", (("+" if net >= 0 else "−") + f"{abs(net):,.1f}") if net is not None else "—", "TZS m net" if net is not None else "",
+             (f'<span class="delta {"up" if flow == "in" else "dn" if flow == "out" else "fl"}">'
+              f'{"net inflow" if flow == "in" else "net outflow" if flow == "out" else "balanced"}</span>') if flow else "",
+             (f"{fpct(pe.get('pct_buy_foreign'),0,False)} of buying · {fpct(pe.get('pct_sell_foreign'),0,False)} of selling" if pe else "awaiting DSE report"),
              "Bought minus sold by non-residents." if pe else "Published with the exchange's own daily report."),
     ])
-    summary_html = sec("summary", "Today in one minute", f"{human_date(d)}",
-                       f"Everything that mattered on the Dar es Salaam Stock Exchange today, in plain language. Figures compare with the previous session, {human_date(pd_)}.")
+    summary_html = sec("summary", "The session in one minute", f"{human_date(d)}",
+                       f"What mattered on the Dar es Salaam Stock Exchange in this session, in plain language. Figures compare with the previous session, {human_date(pd_)}.")
     summary_html += f'<div class="card"><ul class="bullets">{"".join(f"<li>{b}</li>" for b in bullets)}</ul></div>'
     summary_html += f'<div class="grid c4" style="margin-top:14px">{kpis}</div></section>'
 
@@ -278,9 +305,9 @@ def render(ds: dict, archive: list[dict], rel: str = "", pdf_name: str | None = 
     mean = N.indicator_meanings(ds)
     mc = ds["market_caps"]
     rows = [
-        ("Total turnover (TZS million)", p.get("turnover") / 1e6 if p.get("turnover") is not None else None, t["turnover"] / 1e6, 1, mean["turnover"]),
-        ("Volume of shares traded", p.get("volume"), t["volume"], 0, mean["volume"]),
-        ("Number of deals", p.get("deals"), t["deals"], 0, "Completed transactions. More deals with lower turnover means smaller investors were active."),
+        ("Total turnover (TZS million)", p.get("turnover") / 1e6 if p.get("turnover") is not None else None, (t.get("turnover") or 0) / 1e6, 1, mean["turnover"]),
+        ("Volume of shares traded", p.get("volume"), t.get("volume"), 0, mean["volume"]),
+        ("Number of deals", p.get("deals"), t.get("deals"), 0, mean["deals"]),
         ("Total market capitalisation (TZS billion)", mc["total"]["prev"], mc["total"]["today"], 1, mean["total_cap"]),
         ("Domestic market capitalisation (TZS billion)", mc["domestic"]["prev"], mc["domestic"]["today"], 1, mean["domestic_cap"]),
         ("ETF market capitalisation (TZS billion)", mc["etf"]["prev"], mc["etf"]["today"], 1, mean["etf_cap"]),
@@ -301,7 +328,11 @@ def render(ds: dict, archive: list[dict], rel: str = "", pdf_name: str | None = 
     ind_html += "</section>"
 
     # ── movers + gainers/losers ────────────────────────────────────
-    share_items = [(m["code"], m["share_pct"], tzs_compact(m["turnover"]).replace("TZS ", "")) for m in ds["movers"]]
+    maxp = max([m["share_pct"] for m in ds["movers"]] or [1]) or 1
+    share_html = '<div class="sharebars">' + "".join(
+        f'<span class="lb">{_e(m["code"])}</span><span class="bar {"other" if m["code"] == "Others" else "top" if i == 0 else ""}" style="width:{max(1.5, m["share_pct"] / maxp * 100):.1f}%"></span>'
+        f'<span class="vl">{fnum(m["share_pct"],1)}% · {tzs_compact(m["turnover"]).replace("TZS ", "")}</span>'
+        for i, m in enumerate(ds["movers"])) + "</div>" if ds["movers"] else '<div class="empty">No shares were traded</div>'
     mv_html = sec("movers", "Where the money went", "Top movers, gainers and losers",
                   "Movers are the counters that attracted the most money today. Gainers and losers are the biggest price changes, close versus previous close.")
     gl_rows = "".join(f"<tr><td>{_e(x['code'])}</td><td>{fnum(x['prev_close'])}</td><td>{fnum(x['close'])}</td>{_chg_td(x['change_pct'])}<td>{fnum(x['deals'])}</td></tr>"
@@ -309,7 +340,7 @@ def render(ds: dict, archive: list[dict], rel: str = "", pdf_name: str | None = 
     if not gl_rows:
         gl_rows = "<tr><td colspan='5' class='l'>No price changed today.</td></tr>"
     mv_html += ('<div class="grid c2w">'
-                + chart_card("Share of today's equity turnover", f"Top counters by value traded; total {tzs_compact(t['turnover'])}.", charts.share_bars(share_items))
+                + chart_card("Share of the session's equity turnover", f"Top counters by value traded; total {tzs_compact(t['turnover'])}.", share_html)
                 + f'<div class="card"><h3 style="margin:0 0 8px;font-size:15px">Top gainers and losers</h3><div class="twrap"><table class="data"><thead><tr><th class="l">Counter</th><th>Prev close</th><th>Close</th><th>Change</th><th>Deals</th></tr></thead><tbody>{gl_rows}</tbody></table></div>'
                 + f'<div class="plain">{N.gainers_losers_text(ds)}</div></div></div>')
     mv_html += f'<p class="sec-lede" style="margin-top:14px">{N.movers_text(ds)}</p></section>'
@@ -321,7 +352,7 @@ def render(ds: dict, archive: list[dict], rel: str = "", pdf_name: str | None = 
     if pe:
         g_eq = [("Buying", [pe.get("pct_buy_local"), pe.get("pct_buy_foreign")]), ("Selling", [pe.get("pct_sell_local"), pe.get("pct_sell_foreign")])]
         lg = charts.legend([("Local", "var(--s1)"), ("Foreign", "var(--s2)")])
-        c1 = chart_card("Equities", f"Net foreign flow {'+' if pe['net_foreign_mln']>=0 else '−'}TZS {fnum(abs(pe['net_foreign_mln']),1)} million",
+        c1 = chart_card("Equities", (f"Net foreign flow {'+' if net >= 0 else '−'}TZS {fnum(abs(net),1)} million" if net is not None else "Net foreign flow not published"),
                         charts.grouped_columns(g_eq, ["Local", "Foreign"], ["var(--s1)", "var(--s2)"], aria="Equity participation"), lg)
         if pt:
             g_etf = [("Buying", [pt.get("pct_buy_local"), pt.get("pct_buy_foreign")]), ("Selling", [pt.get("pct_sell_local"), pt.get("pct_sell_foreign")])]
@@ -336,20 +367,24 @@ def render(ds: dict, archive: list[dict], rel: str = "", pdf_name: str | None = 
     bd = ds["bonds"]
     bond_html = sec("bonds", "Bonds", "Government bonds on the exchange",
                     "Treasury bonds change hands on the DSE after they are first sold at Bank of Tanzania auctions. Price is per 100 of face value; yield is the annual return locked in at that price.")
-    bt_rows = "".join(f"<tr><td>{b['term']}-year</td><td>{fnum(b['deals'])}</td><td>{fnum(b['turnover_mln'],1)}</td><td>{fnum(b['wa_price'],2) if b['wa_price'] else '—'}</td><td>{(fnum(b['wa_yield'],2)+'%') if b['wa_yield'] else '—'}</td></tr>"
+    def _pv(v, dp=2, suffix=""):
+        return (fnum(v, dp) + suffix) if v else "—"
+    bt_rows = "".join(f"<tr><td>{b['term']}-year</td><td>{fnum(b['deals'])}</td><td>{fnum(b['turnover_mln'],1)}</td><td>{_pv(b['wa_price'])}</td><td>{_pv(b.get('wa_clean'))}</td><td>{_pv(b['wa_yield'],2,'%')}</td></tr>"
                       for b in bd["by_term"])
-    bt_rows += f"<tr class='total'><td>Total</td><td>{fnum(bd['total_deals'])}</td><td>{fnum(bd['total_turnover_mln'],1)}</td><td>{fnum(bd['wa_price'],2) if bd['wa_price'] else '—'}</td><td>{(fnum(bd['wa_yield'],2)+'%') if bd['wa_yield'] else '—'}</td></tr>"
+    bt_rows += (f"<tr class='total'><td>Total</td><td>{fnum(bd['total_deals'])}</td><td>{fnum(bd['total_turnover_mln'],1)}</td><td>{_pv(bd['wa_price'])}</td>"
+                f"<td>{_pv(bd.get('wa_clean'))}</td><td>{_pv(bd['wa_yield'],2,'%')}</td></tr>")
     bond_html += ('<div class="grid c2w">'
-                  f'<div class="card"><h3 style="margin:0 0 8px;font-size:15px">Daily bonds performance by term</h3><div class="twrap"><table class="data"><thead><tr><th class="l">Term</th><th>Deals</th><th>Turnover (TZS m)</th><th>W.A. price</th><th>W.A. yield</th></tr></thead><tbody>{bt_rows}</tbody></table></div>'
+                  f'<div class="card"><h3 style="margin:0 0 8px;font-size:15px">Daily bonds performance by term</h3><div class="twrap"><table class="data"><thead><tr><th class="l">Term</th><th>Deals</th><th>Turnover (TZS m)</th><th>W.A. price</th><th>W.A. clean price</th><th>W.A. yield</th></tr></thead><tbody>{bt_rows}</tbody></table></div>'
                   f'<div class="plain">{N.bonds_text(ds)}</div></div>'
-                  '<div style="display:grid;gap:14px">'
-                  + chart_card("Weighted average price by term", "Per 100 of face value; only terms that traded.", charts.tenor_columns(bd["by_term"][:7], "wa_price", "", 1, aria="WA price by term"))
-                  + chart_card("Weighted average yield by term", "Annual return to maturity at today's prices.", charts.tenor_columns(bd["by_term"][:7], "wa_yield", "%", 2, aria="WA yield by term"))
+                  '<div class="pair">'
+                  + chart_card("Weighted average price by term", "Per 100 of face value, including accrued interest; only terms that traded.", charts.tenor_columns(bd["by_term"][:7], "wa_price", "", 1, aria="Weighted average bond price by term"))
+                  + chart_card("Weighted average yield by term", "Annual return to maturity at the prices paid.", charts.tenor_columns(bd["by_term"][:7], "wa_yield", "%", 2, aria="Weighted average bond yield by term"))
                   + '</div></div>')
-    if bd.get("trades"):
-        tr_rows = "".join(f"<tr><td>{_e(x['bond_no'])}</td><td>{fnum(x['term'])}</td><td>{fnum(x['coupon'],2)}%</td><td>{_e(x['maturity_date'])}</td><td>{fnum(x['deals'])}</td><td>{fnum((x['amount_bn'] or 0)*1000,1)}</td><td>{fnum(x['price'],4)}</td><td>{fnum(x['yield'],4)}%</td><td>{fnum(x['clean_price'],4)}</td></tr>"
-                          for x in bd["trades"])
-        bond_html += (f'<details class="screen-only" style="margin-top:12px"><summary style="cursor:pointer;font-size:13px;color:var(--ink2);font-weight:600">Every bond trade today ({len(bd["trades"])})</summary>'
+    all_tr = (bd.get("trades") or []) + (bd.get("other_bonds") or [])
+    if all_tr:
+        tr_rows = "".join(f"<tr><td>{_e(str(x['bond_no']))}</td><td>{fnum(x['term'])}</td><td>{fnum(x['coupon'],2)}%</td><td>{_e(str(x['maturity_date']))}</td><td>{fnum(x['deals'])}</td><td>{fnum((x['amount_bn'] or 0)*1000,1)}</td><td>{fnum(x['price'],4)}</td><td>{fnum(x['yield'],4)}%</td><td>{fnum(x['clean_price'],4)}</td></tr>"
+                          for x in all_tr)
+        bond_html += (f'<details class="screen-only" style="margin-top:12px"><summary style="cursor:pointer;font-size:13px;color:var(--ink2);font-weight:600">Every bond trade in the session ({len(all_tr)})</summary>'
                       f'<div class="card" style="margin-top:8px"><div class="twrap"><table class="data"><thead><tr><th class="l">Bond</th><th>Term</th><th>Coupon</th><th>Maturity</th><th>Deals</th><th>Face value (TZS m)</th><th>Price</th><th>Yield</th><th>Clean price</th></tr></thead><tbody>{tr_rows}</tbody></table></div></div></details>')
     # auctions
     a, tb = ds["auctions"].get("bond"), ds["auctions"].get("tbill")
@@ -358,7 +393,7 @@ def render(ds: dict, archive: list[dict], rel: str = "", pdf_name: str | None = 
     if a:
         auc_tiles = "".join(f'<div class="ts"><div class="k">{_e(k)}</div><div class="v">{_e(v)}</div></div>' for k, v in [
             ("Bond", f"{fnum(a['coupon'],2)}% {int(a['term'])}-year · No. {a['auction_no']}"), ("Auction date", short_date(a["date"]) if a.get("date") else "—"),
-            ("Offered", f"TZS {fnum(a['offered_mln']/1000,1)} bn"), ("Bids received", f"TZS {fnum(a['tendered_mln']/1000,1)} bn ({a['bid_to_cover']:.1f}×)" if a.get("bid_to_cover") else f"TZS {fnum(a['tendered_mln']/1000,1)} bn"),
+            ("On offer", f"TZS {fnum(a['offered_mln']/1000,1)} bn"), ("Bids received", f"TZS {fnum(a['tendered_mln']/1000,1)} bn ({a['bid_to_cover']:.1f}×)" if a.get("bid_to_cover") else f"TZS {fnum(a['tendered_mln']/1000,1)} bn"),
             ("Allotted", f"TZS {fnum(a['successful_mln']/1000,1)} bn"), ("Weighted average price", f"{fnum(a['wap'],4)} per 100"),
             ("Weighted average yield", f"{fnum(a['way'],4)}%"), ("Minimum successful price", f"{fnum(a['min_successful_price'],4)}"),
         ])
@@ -381,7 +416,7 @@ def render(ds: dict, archive: list[dict], rel: str = "", pdf_name: str | None = 
             row("Bid-to-cover", tb["bid_to_cover"], lambda v: f"{v:.2f}×"),
         ])
         bond_html += (f'<div class="card" style="margin-top:14px"><h3 style="margin:0 0 8px;font-size:15px">Treasury bill auction No. {_e(tb["auction_no"])}'
-                      + (f' · {short_date(tb["date"])}' if tb.get("date") else "") + f'</h3><div class="twrap"><table class="data"><thead><tr><th class="l"></th>{hdr}</tr></thead><tbody>{tb_rows}</tbody></table></div>'
+                      + (f' · {short_date(tb["date"])}' if tb.get("date") else "") + f'</h3><div class="twrap"><table class="data"><thead><tr><th class="l"><span class="sr-only">Measure</span></th>{hdr}</tr></thead><tbody>{tb_rows}</tbody></table></div>'
                       f'<div class="plain">{N.auction_tbill_text(tb)}</div></div>')
     bond_html += "</section>"
 
@@ -452,7 +487,8 @@ def render(ds: dict, archive: list[dict], rel: str = "", pdf_name: str | None = 
     <div class="asof">Built automatically <b>{_e(ds['generated_at'][:16].replace('T',' '))} EAT</b> from DSE, BOT and fund-manager publications</div>
     <div class="actions">{pdf_link}<a class="btn ghost" href="{rel}archive/">Past reports</a><a class="btn ghost" href="{SITE}">The Ticker home</a></div>
   </div></div>
-  <div class="tape" aria-label="Key numbers"><div class="tape-track">{tape_html}</div></div>
+  <div class="tape-wrap"><div class="tape" id="tape" role="marquee" aria-label="Key numbers"><div class="tape-track">{tape_html}</div></div>
+  <button class="tape-pause" type="button" id="tape-pause" aria-pressed="false" onclick="var t=document.getElementById('tape');t.classList.toggle('paused');var on=t.classList.contains('paused');this.setAttribute('aria-pressed',on);this.textContent=on?'Play':'Pause'">Pause</button></div>
 </header>
 <nav class="nav" aria-label="Sections"><div class="nav-in">
   <a href="#summary">Summary</a><a href="#indicators">Indicators</a><a href="#movers">Movers</a><a href="#participation">Foreign vs local</a>
@@ -470,12 +506,13 @@ def render(ds: dict, archive: list[dict], rel: str = "", pdf_name: str | None = 
 {gloss_html}
 </main>
 <footer><div class="foot-in">
-  <div><h4>About this report</h4><p style="margin:0">The Ticker's DSE Daily Market Report is produced by an automated pipeline after each trading day: it reads the exchange's published prices and its daily Market Report, the Bank of Tanzania's auction results and fund managers' unit prices, then writes this page and its PDF. No numbers are typed by hand. Every figure links back to its official source.</p>
+  <div><h4>About this report</h4><p style="margin:0">The Ticker's DSE Daily Market Report is produced by an automated pipeline after each trading day: it reads the exchange's published prices and its daily Market Report, the Bank of Tanzania's auction results and fund managers' unit prices, then writes this page and its PDF. No numbers are typed by hand. The official sources for every figure are listed on the right.</p>
     <div class="foot-note">Report for {short_date(d)} · generated {_e(ds['generated_at'][:16].replace('T',' '))} EAT</div>
     <div class="screen-only" style="margin-top:12px"><h4>Recent reports</h4><ul>{arch_items or '<li>—</li>'}</ul></div></div>
   <div><h4>Official sources</h4><ul>{src_html}</ul></div>
 </div><div class="foot-bar">© {d.year} <b>The Ticker</b> — all rights reserved. Data: Dar es Salaam Stock Exchange, Bank of Tanzania and fund-manager publications.</div></footer>
 </body></html>"""
+    html = html.replace("<th>", '<th scope="col">').replace('<th class="l">', '<th scope="col" class="l">')
     return html
 
 
