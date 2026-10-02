@@ -1,0 +1,112 @@
+"""A small menu so the daily report can be run without typing commands.
+
+    python scripts/ticker.py          (or double-click Ticker-Report.bat / Ticker-Report.command)
+"""
+from __future__ import annotations
+
+import os
+import platform
+import subprocess
+import sys
+import webbrowser
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+WIN = platform.system() == "Windows"
+SITE = "https://thetickertz.github.io/The-Ticker/market-report/"
+
+
+def runner(*extra: str) -> int:
+    if WIN:
+        cmd = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(ROOT / "scripts" / "run_daily.ps1"), *extra]
+    else:
+        cmd = ["bash", str(ROOT / "scripts" / "run_daily.sh"), *extra]
+    return subprocess.call(cmd, cwd=ROOT)
+
+
+def open_path(p: Path | str):
+    p = str(p)
+    if WIN:
+        os.startfile(p)  # type: ignore[attr-defined]
+    elif platform.system() == "Darwin":
+        subprocess.call(["open", p])
+    else:
+        subprocess.call(["xdg-open", p])
+
+
+def export_dir() -> Path | None:
+    sys.path.insert(0, str(ROOT))
+    try:
+        from scripts.market_report.build import export_dir as _ed  # noqa: PLC0415
+        return _ed()
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def load_env():
+    env = ROOT / "scripts" / ".env"
+    if env.exists():
+        for line in env.read_text().splitlines():
+            if "=" in line and not line.strip().startswith("#"):
+                k, v = line.split("=", 1)
+                os.environ.setdefault(k.strip(), v.strip().strip('"'))
+
+
+def menu():
+    load_env()
+    while True:
+        print("\n  The Ticker · DSE Daily Market Report")
+        print("  ───────────────────────────────────")
+        print("  1  Build / refresh the latest trading day")
+        print("  2  Rebuild a specific date")
+        print("  3  Open the latest report")
+        print("  4  Open the Desktop folder of reports")
+        print("  5  Install or remove the schedule")
+        print("  6  Open the guide")
+        print("  7  Show settings")
+        print("  0  Quit")
+        choice = input("\n  Choose: ").strip()
+        if choice == "1":
+            runner()
+        elif choice == "2":
+            d = input("  Date (YYYY-MM-DD): ").strip()
+            if len(d) == 10:
+                runner("-Date", d, "-Force") if WIN else runner("--date", d, "--force")
+        elif choice == "3":
+            page = ROOT / "market-report" / "index.html"
+            open_path(page) if page.exists() else print("  No report built yet — choose 1 first.")
+        elif choice == "4":
+            ed = export_dir()
+            if ed and ed.exists():
+                open_path(ed)
+            else:
+                print(f"  The folder does not exist yet ({ed}); it is created by the first finished report.")
+        elif choice == "5":
+            if WIN:
+                sub = input("  (i)nstall or (r)emove? ").strip().lower()
+                args = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(ROOT / "scripts" / "schedule_windows.ps1")]
+                subprocess.call(args + (["-Remove"] if sub.startswith("r") else []), cwd=ROOT)
+            else:
+                sub = input("  (i)nstall or (r)emove? ").strip().lower()
+                subprocess.call(["bash", str(ROOT / "scripts" / "schedule_unix.sh")] + (["--remove"] if sub.startswith("r") else []), cwd=ROOT)
+        elif choice == "6":
+            g = ROOT / "market-report" / "guide.html"
+            open_path(g) if g.exists() else webbrowser.open(SITE + "guide.html")
+        elif choice == "7":
+            env = ROOT / "scripts" / ".env"
+            print(f"\n  Settings file: {env} ({'exists' if env.exists() else 'missing — copy scripts/.env.example to scripts/.env'})")
+            for k in ("REPORT_PUSH", "REPORT_EXPORT_DIR", "REPORT_SMTP_HOST", "REPORT_EMAIL_TO"):
+                print(f"  {k:<18} = {os.environ.get(k, '') or '(default)'}")
+            print(f"  Reports folder     = {export_dir()}")
+            print(f"  Log                = {Path.home() / '.the-ticker' / 'run.log'}")
+        elif choice in ("0", "q", ""):
+            return 0
+        else:
+            print("  Not a choice.")
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(menu())
+    except KeyboardInterrupt:
+        sys.exit(0)

@@ -1,12 +1,16 @@
-# DSE Daily Market Report — automated pipeline
+# DSE Daily Market Report — automated generator
 
 The Ticker's daily report on the Dar es Salaam Stock Exchange, modelled on the daily
 "Capital Markets Update" that brokerage desks circulate, but rebuilt in The Ticker's design and
-written so a first-time investor can follow it. **It is produced entirely by code on a schedule on
-your own computer; nobody (and no AI model, and no cloud service) is in the loop on a normal day.**
+written so a first-time investor can follow it. **A small program on your own computer produces it
+after each trading day; nobody (and no AI model, and no cloud service) is in the loop.**
 
-Live page: <https://thetickertz.github.io/The-Ticker/market-report/> · archive at `archive/`
-(each day's page has a *Download PDF* button).
+**What you get:** one PDF (and a web-page copy) per trading day in **Desktop › The Ticker Market
+Reports**, e.g. `The Ticker - DSE Daily Market Report - 2026-10-01.pdf`. Publishing to the public
+Ticker site is switched off by default and can be turned on later (see *Publishing*).
+
+Guide for whoever runs it: `market-report/guide.html` (open it in a browser) or the menu launcher
+`Ticker-Report.bat` / `Ticker-Report.command` in the repository folder.
 
 ## What is in the report
 
@@ -38,14 +42,13 @@ the result to GitHub so the public page updates.
    repository (GitHub Desktop or `gh auth login` sets the credentials up).
 2. Clone the repository and open a terminal in it:
    `git clone https://github.com/thetickertz/The-Ticker.git && cd The-Ticker`
-3. Copy `scripts/.env.example` to `scripts/.env`. Keep `REPORT_PUSH=1` to publish to GitHub Pages, or
-   set it to `0` to only build the files locally. Fill in the SMTP lines only if you want the PDF
-   e-mailed.
+3. Copy `scripts/.env.example` to `scripts/.env`. The defaults build locally and save to the Desktop
+   folder without publishing anything. Fill in the SMTP lines only if you want the PDF e-mailed.
 4. Run it once by hand to let it install its own virtual environment and Chromium (first run ~3 minutes):
    - Windows: `powershell -ExecutionPolicy Bypass -File scripts\run_daily.ps1`
    - macOS / Linux: `scripts/run_daily.sh`
-   The report appears in `market-report/` (open `market-report/index.html`), and with `REPORT_PUSH=1`
-   it is committed and pushed.
+   The report appears in **Desktop › The Ticker Market Reports** (PDF and HTML) and in `market-report/`
+   inside the repository.
 5. Install the schedule (weekdays 16:40, 18:40, 20:40 and next-morning 08:10, East Africa Time —
    converted to your computer's time zone automatically):
    - Windows: `powershell -ExecutionPolicy Bypass -File scripts\schedule_windows.ps1`
@@ -53,19 +56,27 @@ the result to GitHub so the public page updates.
      catches up if a start was missed; `-Remove` deletes it)
    - macOS / Linux: `scripts/schedule_unix.sh` (adds four cron lines; `--remove` deletes them)
 
-Each run: pulls the latest repository, asks the DSE for its last trading day, builds only if that day
-is not yet built from the full exchange report, writes `archive/<date>.html`, `data/<date>.json`,
-the PDF (only once the exchange's own Market Report is available), updates `archive/index.html`,
-rewrites `index.html` when the day is the newest, re-checks the last few days for a partial build
-whose Market Report has since appeared, then commits and pushes (if `REPORT_PUSH=1`) and e-mails
-(if SMTP is configured). Logs go to `~/.the-ticker/run.log` (Windows: `%USERPROFILE%\.the-ticker\run.log`).
+Each run: asks the DSE for its last trading day, builds only if that day is not yet built from the
+full exchange report, writes `archive/<date>.html`, `archive/<date>.pdf` and `data/<date>.json`,
+updates `archive/index.html` and (when the day is the newest) `index.html`, copies the PDF and web
+page to the Desktop folder, re-checks the last few days for a partial build whose Market Report has
+since appeared, then e-mails the PDF if SMTP is configured and pushes if publishing is on. Logs go to
+`~/.the-ticker/run.log` (Windows: `%USERPROFILE%\.the-tickerun.log`).
 
-If the exchange has not yet posted its Market Report when a run happens, the page is still built
-from the JSON feed (all prices, indices, movers, auctions and funds), with a note that participation
-and bond-trade details will be filled in; a later run completes it. In `auto` mode nothing is built
-before 16:00 EAT on the trading day itself, so an intraday snapshot is never published. The computer
-needs to be on (or allowed to wake) at the scheduled times; a missed slot is simply picked up by the
-next one.
+If the exchange has not yet posted its Market Report when a run happens, the report is still built
+from the price feed (all prices, indices, movers, auctions and funds) with a note that participation
+and bond-trade details will follow; the Desktop copy is named *(preliminary)* and is replaced by the
+final edition when a later run completes the day. In `auto` mode nothing is built before 16:00 EAT on
+the trading day itself, so an unfinished session is never used. The computer needs to be on (or
+allowed to wake) at the scheduled times; a missed slot is simply picked up by the next one.
+
+### Publishing to the public site (off by default)
+
+The generated files under `market-report/` (`index.html`, `archive/`, `data/`) are git-ignored, so the
+public Ticker site shows nothing until you choose to publish. To publish: remove those three lines from
+`.gitignore`, set `REPORT_PUSH=1` in `scripts/.env`, and add a link to the report on the main page. From
+then on every run commits and pushes the new report and GitHub Pages serves it at
+<https://thetickertz.github.io/The-Ticker/market-report/>.
 
 Manual runs: `scripts/run_daily.sh --date 2026-10-01 --force` (Windows: `-Date 2026-10-01 -Force`), or
 the underlying command `python -m scripts.market_report.build --date 2026-10-01 --force --no-pdf`.
@@ -112,9 +123,8 @@ is skipped. (Gmail works with an app password; Microsoft 365 with SMTP AUTH enab
   was skipped; fix `parse_report()` in `dse.py` and re-run with `--force`.
 - **Holidays.** The build keys off the DSE's own last-trading-day endpoint, so public holidays need no
   calendar.
-- **Repository size.** Each complete day adds roughly 400 KB to the working tree (HTML + JSON + one PDF),
-  and because git keeps history the repository itself grows by about that much per trading day
-  (~100 MB a year). PDFs older than a year are removed from the working tree (`--keep-pdf-days`, default
+- **Repository size (only if publishing).** Each day adds roughly 400 KB (HTML + JSON + one PDF), and
+  because git keeps history the repository grows by about that much per trading day (~100 MB a year). PDFs older than a year are removed from the working tree (`--keep-pdf-days`, default
   366) and their pages re-rendered without the download button; the HTML page and JSON dataset for every
   day are kept, so the archive stays complete. If the history ever becomes a burden, move the PDFs to a
   release asset or an object store — the pipeline only needs `archive/<date>.pdf` to exist when it writes

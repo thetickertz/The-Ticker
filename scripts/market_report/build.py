@@ -7,8 +7,7 @@
 Outputs (under --out, default market-report/):
     index.html                 the newest report
     archive/YYYY-MM-DD.html    every report
-    archive/YYYY-MM-DD.pdf     A4 PDF (only for complete builds, i.e. once the exchange's own
-                               Market Report was available; older PDFs are pruned, see --keep-pdf-days)
+    archive/YYYY-MM-DD.pdf     A4 PDF (older PDFs are pruned, see --keep-pdf-days)
     archive/index.html         listing
     data/YYYY-MM-DD.json       the parsed dataset (machine-readable)
     data/history.json          rolling daily series for the trend tiles
@@ -92,6 +91,77 @@ def make_pdf(html_path: Path, pdf_path: Path, title: str) -> bool:
     return True
 
 
+# ───────────────────────────── Desktop export ─────────────────────────────
+EXPORT_FOLDER_NAME = "The Ticker Market Reports"
+SITE_URL = "https://thetickertz.github.io/The-Ticker/market-report/"
+
+
+def resolve_desktop() -> Path | None:
+    """The user's Desktop, including a OneDrive-redirected Desktop on Windows."""
+    if sys.platform.startswith("win"):
+        try:
+            import winreg  # noqa: PLC0415
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+                                r"Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders") as k:
+                v, _ = winreg.QueryValueEx(k, "Desktop")
+                p = Path(os.path.expandvars(v))
+                if p.exists():
+                    return p
+        except Exception:  # noqa: BLE001
+            pass
+    for cand in (Path.home() / "Desktop", Path.home() / "OneDrive" / "Desktop"):
+        if cand.exists():
+            return cand
+    return None
+
+
+def export_dir() -> Path | None:
+    """Where finished reports are copied. REPORT_EXPORT_DIR overrides; '0'/'off' disables; CI never exports."""
+    v = (os.environ.get("REPORT_EXPORT_DIR") or "").strip()
+    if v.lower() in ("0", "off", "none", "false"):
+        return None
+    if v:
+        return Path(v).expanduser()
+    if os.environ.get("GITHUB_ACTIONS") or os.environ.get("CI"):
+        return None
+    desk = resolve_desktop()
+    return (desk / EXPORT_FOLDER_NAME) if desk else None
+
+
+def export_report(ds: dict, archive: list[dict], arch_dir: Path, pdf_ok: bool) -> Path | None:
+    """Copy the day's PDF and a self-contained HTML (links pointing at the live site) to the export folder."""
+    dest = export_dir()
+    if dest is None:
+        return None
+    try:
+        dest.mkdir(parents=True, exist_ok=True)
+        d = ds["date"]
+        complete = bool(ds["sources"]["dse_report_found"])
+        base = f"The Ticker - DSE Daily Market Report - {d}"
+        stem = base if complete else f"{base} (preliminary)"
+        if complete:  # the final edition replaces any preliminary copy
+            for old in (dest / f"{base} (preliminary).pdf", dest / f"{base} (preliminary).html"):
+                old.unlink(missing_ok=True)
+        (dest / f"{stem}.html").write_text(render(ds, archive, rel=SITE_URL, pdf_name=(f"{d}.pdf" if pdf_ok else None)), encoding="utf-8")
+        if pdf_ok and (arch_dir / f"{d}.pdf").exists():
+            (dest / f"{stem}.pdf").write_bytes((arch_dir / f"{d}.pdf").read_bytes())
+        readme = dest / "About this folder.txt"
+        if not readme.exists():
+            readme.write_text(
+                "The Ticker - DSE Daily Market Reports\n\n"
+                "One PDF and one HTML file per trading day, written automatically by the report generator.\n"
+                "The HTML file opens in any browser and links to the live site; the PDF is the printable edition.\n"
+                "Files are named by trading day (YYYY-MM-DD) so they sort in order. A day that was first built\n"
+                "before the exchange published its own Market Report is saved as '(preliminary)' and replaced by\n"
+                "the final edition once the report is complete.\n\n"
+                f"Live page: {SITE_URL}\n", encoding="utf-8")
+        log(f"exported {stem} to {dest}")
+        return dest
+    except Exception as e:  # noqa: BLE001
+        log(f"export to {dest} failed: {e}")
+        return None
+
+
 # ───────────────────────────── one day ─────────────────────────────
 class Site:
     def __init__(self, out: Path, no_pdf: bool):
@@ -122,7 +192,7 @@ class Site:
         is_newest = d >= (self.newest() or d)
 
         pdf_ok = False
-        want_pdf = complete and not self.no_pdf
+        want_pdf = not self.no_pdf  # a preliminary PDF when the exchange report is late, the final one later
         pdf_name = f"{d}.pdf" if want_pdf else None
         html_arch = render(ds, self.archive, rel="../", pdf_name=pdf_name)
         (self.arch_dir / f"{d}.html").write_text(html_arch, encoding="utf-8")
@@ -142,6 +212,7 @@ class Site:
             self.state.update({"last_built": d, "complete": complete, "built_at": ds["generated_at"]})
         (self.arch_dir / "index.html").write_text(render_archive(self.archive), encoding="utf-8")
         log(f"wrote {self.arch_dir / (d + '.html')}" + (" and index.html" if is_newest else " (archive only; a newer day is live)"))
+        export_report(ds, self.archive, self.arch_dir, pdf_ok)
         return is_newest, pdf_ok
 
     def prune_pdfs(self, keep_days: int, today: date):
@@ -246,6 +317,11 @@ def main(argv=None) -> int:
 
         site.prune_pdfs(args.keep_pdf_days, d)
         site.save()
+        try:
+            from .guide import write_guide  # noqa: PLC0415
+            write_guide(site.out)
+        except Exception as e:  # noqa: BLE001
+            log(f"guide not written: {e}")
         if ds is not None:
             dsei = next((i for i in ds["indices"] if i["code"] == "DSEI"), None)
             log("summary: " + " | ".join([

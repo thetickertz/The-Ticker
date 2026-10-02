@@ -60,6 +60,7 @@ main > section:first-of-type{border-top:0; margin-top:0; padding-top:28px}
 .sec-head{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:6px}
 .sec-head h2{font-size:23px; font-weight:700; letter-spacing:-.01em; margin:0}
 .sec-head .kicker{font-family:var(--mono); font-size:11px; letter-spacing:.14em; color:var(--muted); text-transform:uppercase}
+.sec-head .kicker b{color:var(--s1); font-weight:600; margin-right:6px}
 .sec-lede{color:var(--ink2); max-width:72ch; margin:0 0 18px}
 .sec-lede b, .plain b, .bullets b{color:var(--ink); font-weight:600}
 .grid{display:grid; gap:14px} .grid > *, .two > *, .pair > *{min-width:0}
@@ -96,6 +97,20 @@ table.data td{padding:6px 10px 6px 0; border-bottom:1px solid var(--grid); color
 table.data th:first-child, table.data td:first-child{text-align:left} table.data td:first-child{color:var(--ink); font-weight:600}
 table.data th.l, table.data td.l{text-align:left; white-space:normal}
 table.data tr.total td{border-top:1px solid var(--border2); font-weight:600; color:var(--ink)}
+table.data tbody tr:nth-child(even) td{background:rgba(59,42,28,.028)}
+table.data tbody tr:hover td{background:rgba(42,120,214,.07)}
+.dbar{display:block; height:3px; border-radius:2px; background:var(--s1-soft); margin:3px 0 0 auto; min-width:4px}
+.chart-host{position:relative}
+@media (max-width:700px){ .chart-host.scroll{overflow-x:auto; -webkit-overflow-scrolling:touch} .chart-host.scroll svg{min-width:560px} }
+.tip{position:absolute; pointer-events:none; background:#fffdf9; border:1px solid var(--border2); border-radius:8px; padding:8px 11px; font-size:12.5px; box-shadow:0 10px 28px rgba(59,42,28,.22); opacity:0; transition:opacity .12s; min-width:150px; max-width:240px; z-index:5}
+@media (prefers-reduced-motion:reduce){ .tip{transition:none} }
+.tip .tt{font-family:var(--mono); font-size:11px; color:var(--muted); margin-bottom:5px}
+.tip .trow{display:flex; align-items:baseline; gap:8px} .tip .tkey{width:12px; height:3px; border-radius:2px; flex:none; align-self:center}
+.tip .tval{font-family:var(--mono); font-weight:600; font-size:13.5px; color:var(--ink)} .tip .tname{color:var(--ink2); font-size:11.5px}
+.tschart:focus-visible{outline:2px solid var(--s1); outline-offset:2px; border-radius:6px}
+.chart-foot{font-size:11.5px; color:var(--muted); padding:6px 0 4px}
+.mast-meta .issue{display:inline-block; font-family:var(--mono); font-size:11px; letter-spacing:.08em; color:var(--mast-ink2); margin-left:8px}
+.cover{display:none}
 table.data td.meaning{font-family:var(--sans); color:var(--ink2); font-size:12.5px; white-space:normal; min-width:200px}
 .up{color:var(--up)} .dn{color:var(--down)} .fl{color:var(--muted)}
 td.chg{font-weight:600}
@@ -126,9 +141,20 @@ footer a{color:var(--mast-ink2)} footer ul{margin:0; padding-left:18px} footer l
 @media print{
   @page{size:A4; margin:12mm 11mm 14mm}
   body{background:#fff; font-size:11.5px; line-height:1.4}
-  .nav, .tape, .actions, .screen-only{display:none !important}
-  .mast{background:var(--mast) !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; border-radius:6px}
-  .mast-in{padding:18px 20px 14px} .wordmark .tick{font-size:40px} .mast-meta h1{font-size:18px}
+  .nav, .tape, .tape-wrap, .actions, .screen-only, .tip, .mast{display:none !important}
+  .cover{display:flex; flex-direction:column; justify-content:space-between; min-height:252mm; break-after:page; background:linear-gradient(160deg,var(--mast2) 0%,var(--mast) 70%); color:var(--mast-ink); border-radius:8px; padding:26mm 18mm 16mm; -webkit-print-color-adjust:exact; print-color-adjust:exact}
+  .cover .wordmark .the{font-size:16px} .cover .wordmark .tick{font-size:64px}
+  .cover .ctag{font-family:var(--mono); font-size:11px; letter-spacing:.16em; color:var(--mast-ink2); margin-top:34px}
+  .cover h1{font-size:34px; font-weight:700; margin:8px 0 4px; letter-spacing:-.01em; color:var(--mast-ink)}
+  .cover .cdate{font-size:19px; color:var(--mast-ink2); margin:0 0 30px}
+  .cover .heroes{display:grid; grid-template-columns:repeat(2,1fr); gap:12px}
+  .cover .hero{border:1px solid var(--mast-border); border-radius:10px; padding:12px 14px}
+  .cover .hero .k{font-family:var(--mono); font-size:10px; letter-spacing:.1em; color:var(--mast-ink2); text-transform:uppercase}
+  .cover .hero .v{font-size:26px; font-weight:700; margin-top:4px; color:var(--mast-ink)} .cover .hero .d{font-family:var(--mono); font-size:11px; color:var(--mast-ink2); margin-top:2px}
+  .cover .inside{margin-top:26px; font-size:12px; color:var(--mast-ink2); columns:2; column-gap:24px} .cover .inside b{color:var(--mast-ink); display:block; margin-bottom:6px; font-size:11px; letter-spacing:.12em}
+  .cover .inside ol{margin:0; padding-left:18px} .cover .inside li{margin-bottom:3px}
+  .cover .cfoot{font-family:var(--mono); font-size:10px; color:var(--mast-ink2); border-top:1px solid var(--mast-border); padding-top:10px; margin-top:20px; line-height:1.6}
+  .cover .heroes .hero .v{color:var(--mast-ink)} .cover .tri{display:none}
   main{padding:0 0 10px; max-width:none} main > section{margin-top:18px; padding-top:14px; border-top-width:1px}
   .card, .chart-card, table.data, .auction, .gloss .g{-webkit-print-color-adjust:exact; print-color-adjust:exact}
   .sec-head, .sec-lede, h3{break-after:avoid} thead{display:table-header-group}
@@ -139,12 +165,12 @@ footer a{color:var(--mast-ink2)} footer ul{margin:0; padding-left:18px} footer l
   table.data td.meaning{font-size:9.5px}
   #equities table.data{font-size:8.3px} #equities table.data td, #equities table.data th{padding:2px 4px 2px 0}
   .twrap{overflow:visible}
-  .grid{gap:8px} .two{gap:8px}
+  .grid{gap:8px} .two{gap:8px} #trend .two{grid-template-columns:1fr} .chart-foot{display:none}
   .grid.c2w{grid-template-columns:1.15fr 1fr} .two{grid-template-columns:1fr 1fr} .grid.c4{grid-template-columns:repeat(4,1fr)}
   #bonds .grid.c2w{grid-template-columns:1fr} .pair{grid-template-columns:1fr 1fr} .tape-pause{display:none}
   .card{break-inside:auto} .card.tile, .chart-card, .auction, tr, .ts{break-inside:avoid}
   .tile .val{font-size:19px} .tile .val .delta{font-size:10px}
-  section.pb{break-before:page}
+  section.pb, #trend{break-before:page}
   footer{background:#fff; color:var(--ink2); margin-top:14px} footer h4, .foot-bar b{color:var(--ink)} footer a{color:var(--ink2)}
   .foot-in{padding:10px 0; grid-template-columns:1fr 1fr; gap:14px; font-size:10px} .foot-bar{padding:8px 0; font-size:10px}
   .plain{font-size:10.5px} .sec-lede{font-size:11px}
@@ -211,8 +237,12 @@ def _chg_td(v, dp=1):
     return f'<td class="chg {_cls(v, dp)}">{fpct(v, dp)}</td>'
 
 
+_SEC_COUNTER = {"n": 0}
+
+
 def sec(id_, kicker, title, lede, extra_cls=""):
-    return (f'<section id="{id_}" class="{extra_cls}"><div class="sec-head"><span class="kicker">{_e(kicker)}</span>'
+    _SEC_COUNTER["n"] += 1
+    return (f'<section id="{id_}" class="{extra_cls}"><div class="sec-head"><span class="kicker"><b>{_SEC_COUNTER["n"]:02d}</b>{_e(kicker)}</span>'
             f'<h2>{_e(title)}</h2></div>' + (f'<p class="sec-lede">{lede}</p>' if lede else ""))
 
 
@@ -223,10 +253,10 @@ def tile(label, value, unit="", delta_html="", sub="", plain="", spark=""):
             + (f'<div class="plain">{plain}</div>' if plain else "") + "</div>")
 
 
-def chart_card(title, note, svg, legend_html=""):
+def chart_card(title, note, svg, legend_html="", host_cls=""):
     return (f'<div class="chart-card"><div class="chart-head"><div><h3>{_e(title)}</h3>'
             + (f'<p class="note">{_e(note)}</p>' if note else "") + "</div>" + legend_html + "</div>"
-            + f'<div class="chart-host">{svg}</div></div>')
+            + f'<div class="chart-host {host_cls}">{svg}</div></div>')
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -243,9 +273,11 @@ def render(ds: dict, archive: list[dict], rel: str = "", pdf_name: str | None = 
     for f_ in ds.get("cis") or []:
         if f_.get("date"):
             f_["date"] = _as_date(f_["date"])
+    _SEC_COUNTER["n"] = 0
     d = parse_iso(ds["date"])
     pd_ = parse_iso(ds["prev_date"])
     t, p = ds["totals"], ds.get("prev_totals") or {}
+    issue_no = max(1, sum(1 for x in archive if x.get("date", "") <= ds["date"]))
     idx = {i["code"]: i for i in ds["indices"]}
     pe = (ds.get("participation") or {}).get("equity") or {}
     hist = ds.get("history") or []
@@ -300,6 +332,25 @@ def render(ds: dict, archive: list[dict], rel: str = "", pdf_name: str | None = 
                        f"What mattered on the Dar es Salaam Stock Exchange in this session, in plain language. Figures compare with the previous session, {human_date(pd_)}.")
     summary_html += f'<div class="card"><ul class="bullets">{"".join(f"<li>{b}</li>" for b in bullets)}</ul></div>'
     summary_html += f'<div class="grid c4" style="margin-top:14px">{kpis}</div></section>'
+
+    # ── trend section (last 30 sessions) ───────────────────────────
+    trend_html = ""
+    if len(hist) >= 3:
+        xl = [h["date"] for h in hist]
+        xf = lambda iso_: tiny_date(parse_iso(iso_))
+        idx_chart = charts.line_chart(xl, [{"name": "DSEI (all shares)", "color": "var(--s1)", "values": [h.get("dsei") for h in hist]},
+                                           {"name": "TSI (Tanzanian)", "color": "var(--s2)", "values": [h.get("tsi") for h in hist]}],
+                                      unit="", dp=1, aria="DSEI and TSI over the last 30 sessions, rebased to 100", x_fmt=xf, rebase=True)
+        turn_chart = charts.column_series(xl, [h.get("turnover") for h in hist], unit=" bn", dp=2, scale=1e9,
+                                          aria="Daily equity turnover over the last 30 sessions, TZS billion", x_fmt=xf,
+                                          value_fmt=lambda v: f"TZS {v:,.2f} bn")
+        trend_html = sec("trend", "The last 30 sessions", "Where the market has been",
+                         N.trend_text(ds))
+        trend_html += ('<div class="two">'
+                       + chart_card("Share-price indices, rebased to 100", f"Both indices set to 100 on {xf(xl[0])}, so the lines show percentage change since then. Hover or use the arrow keys for exact values.",
+                                    idx_chart, charts.legend([("DSEI (all shares)", "var(--s1)"), ("TSI (Tanzanian)", "var(--s2)")]), host_cls="scroll")
+                       + chart_card("Daily equity turnover", "TZS billion per session; the latest session in dark blue, the dashed line is the 30-session average.", turn_chart, host_cls="scroll")
+                       + '</div></section>')
 
     # ── key indicators table ───────────────────────────────────────
     mean = N.indicator_meanings(ds)
@@ -431,9 +482,12 @@ def render(ds: dict, archive: list[dict], rel: str = "", pdf_name: str | None = 
                  f'<tbody>{cis_rows or "<tr><td colspan=7 class=l>No fund prices collected.</td></tr>"}</tbody></table></div><div class="plain">{N.cis_text(ds)}</div></div></section>')
 
     # ── all equities + ETFs ────────────────────────────────────────
+    max_turn = max([e["turnover"] or 0 for e in ds["equities"]] or [1]) or 1
     eq_rows = "".join(
         f"<tr><td>{_e(e['code'])}{'‡' if e['cross_listed'] else ''}</td><td>{fnum(e['prev_close'])}</td><td>{fnum(e['close'])}</td>{_chg_td(e['change_pct'])}"
-        f"<td>{fnum(e['year_start'])}</td>{_chg_td(e['ytd_pct'])}<td>{fnum(e['turnover'])}</td><td>{fnum(e['deals'])}</td><td>{fnum(e['bids'])}</td><td>{fnum(e['offers'])}</td><td>{fnum(e['volume'])}</td><td>{fnum(e['market_cap_bn'],2)}</td></tr>"
+        f"<td>{fnum(e['year_start'])}</td>{_chg_td(e['ytd_pct'])}<td>{fnum(e['turnover'])}"
+        + (f"<span class='dbar' style='width:{(e['turnover'] or 0) / max_turn * 100:.1f}%'></span>" if (e['turnover'] or 0) / max_turn >= 0.005 else "")
+        + f"</td><td>{fnum(e['deals'])}</td><td>{fnum(e['bids'])}</td><td>{fnum(e['offers'])}</td><td>{fnum(e['volume'])}</td><td>{fnum(e['market_cap_bn'],2)}</td></tr>"
         for e in ds["equities"])
     eq_rows += (f"<tr class='total'><td>Total</td><td></td><td></td><td></td><td></td><td></td><td>{fnum(t['turnover'])}</td><td>{fnum(t['deals'])}</td>"
                 f"<td>{fnum(t['bids'])}</td><td>{fnum(t['offers'])}</td><td>{fnum(t['volume'])}</td><td>{fnum(t['market_cap_bn'],2)}</td></tr>")
@@ -471,6 +525,23 @@ def render(ds: dict, archive: list[dict], rel: str = "", pdf_name: str | None = 
     src_html = "".join(f'<li><a href="{_e(u)}" target="_blank" rel="noopener">{_e(n)}</a></li>' for n, u in sources)
 
     pdf_link = f'<a class="btn" href="{rel}archive/{pdf_name}">Download PDF &darr;</a>' if pdf_name else ""
+    heroes = [("Equity turnover", f"TZS {t['turnover']/1e9:,.2f} bn" if t.get("turnover") else "—", _delta(turn_chg, 1) if turn_chg is not None else ""),
+              ("All Share Index (DSEI)", fnum(idx["DSEI"]["close"], 2) if "DSEI" in idx else "—", _delta(idx["DSEI"]["change_pct"]) if "DSEI" in idx else ""),
+              ("Tanzania Share Index (TSI)", fnum(idx["TSI"]["close"], 2) if "TSI" in idx else "—", _delta(idx["TSI"]["change_pct"]) if "TSI" in idx else ""),
+              ("Foreign investors, net", (("+" if net >= 0 else "−") + f"TZS {abs(net):,.1f} m") if net is not None else "—",
+               {"in": "net inflow", "out": "net outflow", "flat": "balanced"}.get(flow or "", "") if flow else "awaiting DSE report")]
+    hero_html = "".join(f'<div class="hero"><div class="k">{_e(k)}</div><div class="v">{_e(v)}</div><div class="d">{dd}</div></div>' for k, v, dd in heroes)
+    inside = ["The session in one minute", "Key market indicators", "Top movers, gainers and losers", "Foreign versus local investors",
+              "Government bonds and the latest BOT auctions", "Unit trusts", "Every counter and ETF", "Glossary"]
+    if trend_html:
+        inside.insert(1, "The last 30 sessions")
+    cover_html = (f'<section class="cover" aria-hidden="true"><div><div class="wordmark">{WORDMARK}</div>'
+                  f'<div class="ctag">DAR ES SALAAM STOCK EXCHANGE · DAILY MARKET REPORT · ISSUE No. {issue_no}</div>'
+                  f'<h1>DSE Daily Market Report</h1><p class="cdate">Market close, {human_date(d)}</p>'
+                  f'<div class="heroes">{hero_html}</div>'
+                  f'<div class="inside"><b>INSIDE THIS REPORT</b><ol>{"".join(f"<li>{_e(x)}</li>" for x in inside)}</ol></div></div>'
+                  f'<div class="cfoot">Produced automatically from the Dar es Salaam Stock Exchange, Bank of Tanzania and fund-manager publications · '
+                  f'built {_e(ds["generated_at"][:16].replace("T", " "))} EAT · {SITE}market-report/ · educational summary, not investment advice</div></section>')
     html = f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>{_e(title)}</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -480,9 +551,10 @@ def render(ds: dict, archive: list[dict], rel: str = "", pdf_name: str | None = 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>{CSS}</style></head>
 <body>
+{cover_html}
 <header class="mast"><div class="mast-in">
   <a class="wordmark" href="{SITE}" aria-label="The Ticker">{WORDMARK}</a>
-  <div class="mast-meta"><div class="tag">DAR ES SALAAM STOCK EXCHANGE · DAILY MARKET REPORT</div>
+  <div class="mast-meta"><div class="tag">DAR ES SALAAM STOCK EXCHANGE · DAILY MARKET REPORT</div><span class="issue">ISSUE No. {issue_no}</span>
     <h1>Market close, {human_date(d)}</h1>
     <div class="asof">Built automatically <b>{_e(ds['generated_at'][:16].replace('T',' '))} EAT</b> from DSE, BOT and fund-manager publications</div>
     <div class="actions">{pdf_link}<a class="btn ghost" href="{rel}archive/">Past reports</a><a class="btn ghost" href="{SITE}">The Ticker home</a></div>
@@ -491,12 +563,13 @@ def render(ds: dict, archive: list[dict], rel: str = "", pdf_name: str | None = 
   <button class="tape-pause" type="button" id="tape-pause" aria-pressed="false" onclick="var t=document.getElementById('tape');t.classList.toggle('paused');var on=t.classList.contains('paused');this.setAttribute('aria-pressed',on);this.textContent=on?'Play':'Pause'">Pause</button></div>
 </header>
 <nav class="nav" aria-label="Sections"><div class="nav-in">
-  <a href="#summary">Summary</a><a href="#indicators">Indicators</a><a href="#movers">Movers</a><a href="#participation">Foreign vs local</a>
+  <a href="#summary">Summary</a>{'<a href="#trend">Trend</a>' if trend_html else ''}<a href="#indicators">Indicators</a><a href="#movers">Movers</a><a href="#participation">Foreign vs local</a>
   <a href="#bonds">Bonds &amp; auctions</a><a href="#funds">Unit trusts</a><a href="#equities">All counters</a><a href="#glossary">Glossary</a>
-  <a class="tool" href="{SITE}bond-calculator.html">Bond Calculator</a>
+  <a class="tool" href="{rel}guide.html">Guide</a><a class="tool" href="{SITE}bond-calculator.html">Bond Calculator</a>
 </div></nav>
 <main>
 {summary_html}
+{trend_html}
 {ind_html}
 {mv_html}
 {part_html}
@@ -507,13 +580,42 @@ def render(ds: dict, archive: list[dict], rel: str = "", pdf_name: str | None = 
 </main>
 <footer><div class="foot-in">
   <div><h4>About this report</h4><p style="margin:0">The Ticker's DSE Daily Market Report is produced by an automated pipeline after each trading day: it reads the exchange's published prices and its daily Market Report, the Bank of Tanzania's auction results and fund managers' unit prices, then writes this page and its PDF. No numbers are typed by hand. The official sources for every figure are listed on the right.</p>
-    <div class="foot-note">Report for {short_date(d)} · generated {_e(ds['generated_at'][:16].replace('T',' '))} EAT</div>
+    <div class="foot-note">Report for {short_date(d)} · issue No. {issue_no} · generated {_e(ds['generated_at'][:16].replace('T',' '))} EAT · <a href="{rel}guide.html">how this report is made and how to run it</a></div>
     <div class="screen-only" style="margin-top:12px"><h4>Recent reports</h4><ul>{arch_items or '<li>—</li>'}</ul></div></div>
   <div><h4>Official sources</h4><ul>{src_html}</ul></div>
 </div><div class="foot-bar">© {d.year} <b>The Ticker</b> — all rights reserved. Data: Dar es Salaam Stock Exchange, Bank of Tanzania and fund-manager publications.</div></footer>
+<script>{TOOLTIP_JS}</script>
 </body></html>"""
     html = html.replace("<th>", '<th scope="col">').replace('<th class="l">', '<th scope="col" class="l">')
     return html
+
+
+TOOLTIP_JS = r"""
+(function(){
+  var MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  function dlabel(iso){var p=iso.split("-");return p.length===3?(+p[2])+" "+MON[+p[1]-1]+" "+p[0]:iso;}
+  function fmt(v,dp){return v==null?"—":Number(v).toLocaleString("en-US",{minimumFractionDigits:dp,maximumFractionDigits:dp});}
+  document.querySelectorAll("svg.tschart").forEach(function(svg){
+    var cfg; try{cfg=JSON.parse(svg.getAttribute("data-chart"));}catch(e){return;}
+    var host=svg.parentNode; var tip=document.createElement("div"); tip.className="tip"; host.appendChild(tip);
+    var xh=svg.querySelector("line.xh"); var vb=svg.viewBox.baseVal; var n=cfg.x.length; var cur=-1;
+    function show(i,clientX,clientY){
+      if(i<0||i>=n){tip.style.opacity=0; if(xh)xh.setAttribute("opacity",0); return;}
+      cur=i; var rows=cfg.series.map(function(s){var v=s.values[i]; return v==null?"":'<div class="trow"><span class="tkey" style="background:'+s.color+'"></span><span class="tval">'+fmt(v,cfg.dp)+(cfg.unit||"")+'</span><span class="tname">'+s.name+'</span></div>';}).join("");
+      tip.innerHTML='<div class="tt">'+dlabel(cfg.x[i])+'</div>'+rows;
+      var r=svg.getBoundingClientRect(); var sx=r.width/vb.width; var px=(cfg.plot[0]+cfg.plot[2]*(n===1?0.5:i/(n-1)))*sx;
+      if(xh){xh.setAttribute("x1",cfg.plot[0]+cfg.plot[2]*(i/(n-1))); xh.setAttribute("x2",cfg.plot[0]+cfg.plot[2]*(i/(n-1))); xh.setAttribute("opacity",1);}
+      var hr=host.getBoundingClientRect(); var left=(r.left-hr.left)+px+12; if(left+tip.offsetWidth>hr.width-4) left=(r.left-hr.left)+px-tip.offsetWidth-12;
+      var top=clientY!=null?(clientY-hr.top-tip.offsetHeight-10):8; if(top<4) top=4;
+      tip.style.left=Math.max(4,left)+"px"; tip.style.top=top+"px"; tip.style.opacity=1;
+    }
+    svg.addEventListener("mousemove",function(e){var r=svg.getBoundingClientRect(); var x=(e.clientX-r.left)/ (r.width/vb.width); var f=(x-cfg.plot[0])/cfg.plot[2]; var i=Math.round(f*(n-1)); if(i<0)i=0; if(i>n-1)i=n-1; show(i,e.clientX,e.clientY);});
+    svg.addEventListener("mouseleave",function(){tip.style.opacity=0; if(xh)xh.setAttribute("opacity",0); cur=-1;});
+    svg.addEventListener("keydown",function(e){var i=cur<0?n-1:cur; if(e.key==="ArrowLeft")i=Math.max(0,i-1); else if(e.key==="ArrowRight")i=Math.min(n-1,i+1); else if(e.key==="Home")i=0; else if(e.key==="End")i=n-1; else if(e.key==="Escape"){tip.style.opacity=0; if(xh)xh.setAttribute("opacity",0); cur=-1; return;} else return; e.preventDefault(); show(i,null,null);});
+    svg.addEventListener("blur",function(){tip.style.opacity=0; if(xh)xh.setAttribute("opacity",0); cur=-1;});
+  });
+})();
+"""
 
 
 def render_archive(archive: list[dict]) -> str:

@@ -345,3 +345,32 @@ def etf_text(ds: dict) -> str:
         b += f" on {tzs_compact(r['turnover'])} of trades" if r.get("turnover") else " with no trades"
         bits.append(b)
     return "An exchange-traded fund (ETF) is a basket of shares that trades like one share. " + "; ".join(bits) + "."
+
+
+def trend_text(ds: dict) -> str:
+    """One paragraph on the last 30 sessions, from the stored history."""
+    hist = [h for h in (ds.get("history") or []) if h.get("date")]
+    if len(hist) < 3:
+        return "The trend charts fill in as the report builds up a history of sessions."
+    first, last = hist[0], hist[-1]
+    from .util import parse_iso, short_date  # noqa: PLC0415
+    span = f"{short_date(parse_iso(first['date']))} to {short_date(parse_iso(last['date']))}"
+    parts = [f"Over the {len(hist)} sessions from {span}:"]
+    for key, name in (("dsei", "the All Share Index (DSEI)"), ("tsi", "the Tanzania Share Index (TSI)")):
+        a, b = first.get(key), last.get(key)
+        if a and b:
+            pct = (b / a - 1) * 100
+            parts.append(f"{name} {'rose' if pct > 0.05 else 'fell' if pct < -0.05 else 'was flat'}"
+                         + (f" {fpct(abs(pct), 1, False)}" if abs(pct) >= 0.05 else "") + f", from {fnum(a, 2)} to {fnum(b, 2)};")
+    turns = [h["turnover"] for h in hist if h.get("turnover")]
+    if turns:
+        avg = sum(turns) / len(turns)
+        hi = max(hist, key=lambda h: h.get("turnover") or 0)
+        rel = _ratio_words(last.get("turnover"), avg)
+        parts.append(f"equity turnover averaged {tzs_compact(avg)} a session, with the busiest day on {short_date(parse_iso(hi['date']))} "
+                     f"({tzs_compact(hi['turnover'])}). This session was {rel} the average." if rel else
+                     f"equity turnover averaged {tzs_compact(avg)} a session.")
+    s = " ".join(parts).replace(";.", ".")
+    if s.endswith(";"):
+        s = s[:-1] + "."
+    return s + " Rebasing both indices to 100 at the start of the window makes their percentage moves directly comparable even though their levels differ."
