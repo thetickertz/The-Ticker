@@ -176,7 +176,11 @@ def collect(http: Http, year: int, cache: dict) -> dict:
     for name, fn in (("UTT AMIS", lambda: utt_amis(http, year, cache)), ("Inuka", lambda: inuka(http, year)),
                      ("Faida", lambda: faida(http, year))):
         try:
-            funds.extend(fn())
+            rows = fn()
+            if rows:
+                funds.extend(rows)
+            else:  # the page answered but carried no NAV rows (e.g. Orbit's "fund feed unavailable" notice)
+                errors.append(f"{name} published no unit prices today; its rows are left out.")
         except Exception as e:  # noqa: BLE001
             errors.append(f"{name}: {e}")
     etf_navs = {}
