@@ -127,38 +127,106 @@ def export_dir() -> Path | None:
     return (desk / EXPORT_FOLDER_NAME) if desk else None
 
 
+def export_dirs() -> list[Path]:
+    """Every folder that receives a copy of each finished report: the main one (Desktop unless
+    REPORT_EXPORT_DIR says otherwise) plus any listed in REPORT_COPY_DIRS, separated by ';'
+    (for example a folder on an external SSD)."""
+    out: list[Path] = []
+    main = export_dir()
+    if main is not None:
+        out.append(main)
+    for raw in (os.environ.get("REPORT_COPY_DIRS") or "").split(";"):
+        raw = raw.strip().strip('"')
+        if raw and Path(raw).expanduser() not in out:
+            out.append(Path(raw).expanduser())
+    return out
+
+
+MOUNT_ROOTS = {"/Volumes", "/media", "/mnt", "/run/media"}
+
+
+def drive_present(dest: Path) -> bool:
+    """True when `dest` exists or can be created on a drive that is connected now. A folder on an
+    unplugged drive must not be created on the system disk instead, so the nearest existing
+    ancestor may not be a mount-point directory, the filesystem root or a missing drive letter."""
+    anc = dest
+    while not anc.exists():
+        if anc.parent == anc:
+            return False
+        anc = anc.parent
+    s = str(anc).replace("\\", "/")
+    if anc == Path(anc.anchor) or s in MOUNT_ROOTS:
+        return False
+    return not any(s.startswith(m + "/") and s.count("/") == m.count("/") + 1 for m in ("/media", "/run/media"))
+
+
+def export_one(ds: dict, archive: list[dict], arch_dir: Path, pdf_ok: bool, dest: Path) -> str:
+    """Write the day's PDF and a self-contained HTML (links pointing at the live site) into one folder."""
+    dest.mkdir(parents=True, exist_ok=True)
+    d = ds["date"]
+    complete = bool(ds["sources"]["dse_report_found"])
+    base = f"The Ticker - DSE Daily Market Report - {d}"
+    stem = base if complete else f"{base} (preliminary)"
+    if complete:  # the final edition replaces any preliminary copy
+        for old in (dest / f"{base} (preliminary).pdf", dest / f"{base} (preliminary).html"):
+            old.unlink(missing_ok=True)
+    (dest / f"{stem}.html").write_text(render(ds, archive, rel=SITE_URL, pdf_name=(f"{d}.pdf" if pdf_ok else None)), encoding="utf-8")
+    if pdf_ok and (arch_dir / f"{d}.pdf").exists():
+        (dest / f"{stem}.pdf").write_bytes((arch_dir / f"{d}.pdf").read_bytes())
+    readme = dest / "About this folder.txt"
+    if not readme.exists():
+        readme.write_text(
+            "The Ticker - DSE Daily Market Reports\n\n"
+            "One PDF and one HTML file per trading day, written automatically by the report generator.\n"
+            "The HTML file opens in any browser and links to the live site; the PDF is the printable edition.\n"
+            "Files are named by trading day (YYYY-MM-DD) so they sort in order. A day that was first built\n"
+            "before the exchange published its own Market Report is saved as '(preliminary)' and replaced by\n"
+            "the final edition once the report is complete.\n\n"
+            f"Live page: {SITE_URL}\n", encoding="utf-8")
+    return stem
+
+
 def export_report(ds: dict, archive: list[dict], arch_dir: Path, pdf_ok: bool) -> Path | None:
-    """Copy the day's PDF and a self-contained HTML (links pointing at the live site) to the export folder."""
-    dest = export_dir()
-    if dest is None:
-        return None
-    try:
-        dest.mkdir(parents=True, exist_ok=True)
-        d = ds["date"]
-        complete = bool(ds["sources"]["dse_report_found"])
-        base = f"The Ticker - DSE Daily Market Report - {d}"
-        stem = base if complete else f"{base} (preliminary)"
-        if complete:  # the final edition replaces any preliminary copy
-            for old in (dest / f"{base} (preliminary).pdf", dest / f"{base} (preliminary).html"):
-                old.unlink(missing_ok=True)
-        (dest / f"{stem}.html").write_text(render(ds, archive, rel=SITE_URL, pdf_name=(f"{d}.pdf" if pdf_ok else None)), encoding="utf-8")
-        if pdf_ok and (arch_dir / f"{d}.pdf").exists():
-            (dest / f"{stem}.pdf").write_bytes((arch_dir / f"{d}.pdf").read_bytes())
-        readme = dest / "About this folder.txt"
-        if not readme.exists():
-            readme.write_text(
-                "The Ticker - DSE Daily Market Reports\n\n"
-                "One PDF and one HTML file per trading day, written automatically by the report generator.\n"
-                "The HTML file opens in any browser and links to the live site; the PDF is the printable edition.\n"
-                "Files are named by trading day (YYYY-MM-DD) so they sort in order. A day that was first built\n"
-                "before the exchange published its own Market Report is saved as '(preliminary)' and replaced by\n"
-                "the final edition once the report is complete.\n\n"
-                f"Live page: {SITE_URL}\n", encoding="utf-8")
-        log(f"exported {stem} to {dest}")
-        return dest
-    except Exception as e:  # noqa: BLE001
-        log(f"export to {dest} failed: {e}")
-        return None
+    """Copy the day's report to every export folder. Returns the first folder written."""
+    first = None
+    for dest in export_dirs():
+        if not drive_present(dest):
+            log(f"copy folder {dest} is not available now (drive not connected?); it will catch up on a later run")
+            continue
+        try:
+            stem = export_one(ds, archive, arch_dir, pdf_ok, dest)
+            log(f"exported {stem} to {dest}")
+            first = first or dest
+        except Exception as e:  # noqa: BLE001
+            log(f"export to {dest} failed: {e}")
+    return first
+
+
+def sync_exports(archive: list[dict], arch_dir: Path, data_dir: Path, days: int = 90) -> None:
+    """Give every export folder the recent reports it is missing, so a drive that was unplugged
+    when a report was built receives it the next time the generator runs with it connected."""
+    cutoff = iso(date.today() - timedelta(days=days))
+    recent = [x for x in archive if x["date"] >= cutoff]
+    for dest in export_dirs():
+        if not drive_present(dest):
+            log(f"copy folder {dest} is not available now (drive not connected?)")
+            continue
+        copied = 0
+        for x in recent:
+            base = f"The Ticker - DSE Daily Market Report - {x['date']}"
+            stem = base if x.get("complete") else f"{base} (preliminary)"
+            need_pdf = bool(x.get("pdf")) and (arch_dir / f"{x['date']}.pdf").exists() and not (dest / f"{stem}.pdf").exists()
+            if not need_pdf and (dest / f"{stem}.html").exists():
+                continue
+            ds = load_json(data_dir / f"{x['date']}.json", None)
+            if ds is None:
+                continue
+            try:
+                export_one(ds, archive, arch_dir, bool(x.get("pdf")), dest)
+                copied += 1
+            except Exception as e:  # noqa: BLE001
+                log(f"copy of {x['date']} to {dest} failed: {e}")
+        log(f"{dest}: " + (f"copied {copied} report(s)" if copied else "up to date"))
 
 
 # ───────────────────────────── one day ─────────────────────────────
@@ -261,6 +329,7 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default=str(ROOT / "market-report"))
     ap.add_argument("--force", action="store_true", help="rebuild even if this day was already built")
     ap.add_argument("--no-pdf", action="store_true")
+    ap.add_argument("--sync-exports", action="store_true", help="only copy missing recent reports to the export folders, then exit")
     ap.add_argument("--keep-pdf-days", type=int, default=366,
                     help="delete archived PDFs older than this many days (HTML and JSON are kept forever)")
     args = ap.parse_args(argv)
@@ -268,6 +337,9 @@ def main(argv=None) -> int:
         args.date = "auto"
 
     site = Site(Path(args.out), args.no_pdf)
+    if args.sync_exports:
+        sync_exports(site.archive, site.arch_dir, site.data_dir)
+        return 0
     http = Http()
     dse = DSE(http)
     builder = Builder(site.data_dir, http, log)
@@ -317,6 +389,7 @@ def main(argv=None) -> int:
                             log(f"could not complete {x['date']}: {e}")
 
         site.prune_pdfs(args.keep_pdf_days, d)
+        sync_exports(site.archive, site.arch_dir, site.data_dir)
         site.save()
         try:
             from .guide import write_guide  # noqa: PLC0415

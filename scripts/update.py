@@ -28,7 +28,7 @@ FALLBACK_BRANCHES = ["main", "claude/automated-market-report-i53qpm"]  # tried i
 KEEP = {"scripts/.env", "scripts/recipients.txt", "scripts/VERSION"}
 API = f"https://api.github.com/repos/{REPO}/commits/"
 REPLACE_DIRS = ["scripts"]
-REPLACE_FILES = ["Ticker-Report.bat", "Ticker-Report.command", "market-report/README.md"]
+REPLACE_FILES = ["Ticker-Report.bat", "Ticker-Report.command", "START HERE.html", "market-report/README.md"]
 
 
 def project_root() -> Path:

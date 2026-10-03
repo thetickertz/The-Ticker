@@ -28,13 +28,14 @@ to the live site.</p>
 macOS/Linux   scripts/run_daily.sh</pre>
     The first run creates a private Python environment and downloads Chromium for the PDF (two or three minutes). Every later run takes about a minute. macOS may refuse the first double-click of a downloaded <code>.command</code> file ("Apple could not verify…"): click <i>Done</i> and run <code>bash scripts/run_daily.sh</code> once from Terminal, which clears the flag, or see <a href="#trouble">When something goes wrong</a>.</li>
   <li><b>Put it on a timer.</b> From the menu choose <i>5</i>, or run <code>scripts\\schedule_windows.ps1</code> (Windows Task Scheduler) or <code>scripts/schedule_unix.sh</code> (cron). The job runs <b>every working day at 18:30 East Africa Time</b> (the market closes at 16:00), converted to your computer's clock; you can choose another time when installing. The computer must be on, or allowed to wake, at that time; if it was off, the next day's run also completes the missed day.</li>
+  <li><b>A copy on an external SSD or USB drive (optional).</b> From the menu choose <b>F</b>, then <i>a</i>, and pick the drive from the list. Every report is then saved there as well, and the reports already built are copied at once. If the drive is unplugged at 18:30 that day's copy is skipped and made up the next time the generator runs with the drive connected (or choose <b>F</b> → <i>c</i>).</li>
 </ol>"""),
     ("daily", "What happens on a normal day", """
 <ol class="steps">
   <li>The job asks the DSE for its last trading day. Before 16:00 EAT on a trading day it stops, so an unfinished session is never published.</li>
   <li>If that day is already built from the exchange's full Market Report, it stops: nothing to do.</li>
   <li>Otherwise it fetches everything, derives the figures, writes the explanations, renders the web page and the PDF into <code>market-report/archive/</code> and updates the archive listing.</li>
-  <li>It copies the PDF and the web page to <b>Desktop › The Ticker Market Reports</b>, named <code>The Ticker - DSE Daily Market Report - 2026-10-01.pdf</code> and <code>.html</code>. This folder is the deliverable: open the PDF, print it, or forward it.</li>
+  <li>It copies the PDF and the web page to <b>Desktop › The Ticker Market Reports</b>, named <code>The Ticker - DSE Daily Market Report - 2026-10-01.pdf</code> and <code>.html</code>, and to any extra folder you added with menu choice <b>F</b> (an external SSD, for instance). This folder is the deliverable: open the PDF, print it, or forward it.</li>
   <li>With SMTP settings it e-mails the PDF; with <code>REPORT_PUSH=1</code> it also commits and pushes to the public site.</li>
 </ol>
 <p>If the exchange has not yet posted its Market Report at 18:30, the report is still built from the price feed (prices, indices, movers, auctions, funds) with a note that participation and bond details will follow. The Desktop copy is named <i>(preliminary)</i>; the next run, even the following day, builds the complete edition, replaces it and e-mails it.</p>
@@ -45,12 +46,13 @@ macOS/Linux   scripts/run_daily.sh</pre>
 <tr><td>1</td><td class="l">Build or refresh the latest trading day (the normal daily run)</td></tr>
 <tr><td>2</td><td class="l">Rebuild a specific date you type (for example after a source correction)</td></tr>
 <tr><td>3</td><td class="l">Open the latest report in your browser</td></tr>
-<tr><td>4</td><td class="l">Open the Desktop folder of reports</td></tr>
+<tr><td>4</td><td class="l">Open the folder of reports (and list the extra copy folders)</td></tr>
 <tr><td>5</td><td class="l">Install or remove the schedule</td></tr>
 <tr><td>6</td><td class="l">Open this guide</td></tr>
 <tr><td>7</td><td class="l">Show the current settings and where to change them</td></tr>
 <tr><td>8</td><td class="l">E-mail recipients: list, add or remove addresses</td></tr>
 <tr><td>9</td><td class="l">Send a test e-mail of the latest report now</td></tr>
+<tr><td>F</td><td class="l">Report folders: add a second folder that receives every report (an external SSD, a USB stick, a synced folder), remove one, or copy the existing reports there now</td></tr>
 <tr><td>U</td><td class="l">Update the generator from GitHub, keeping your settings, e-mail list and reports</td></tr>
 </tbody></table>
 <p>Command-line equivalents for scripts and automation:</p>
@@ -101,6 +103,7 @@ REPORT_EMAIL_TO=you@gmail.com</pre></li>
 <tr><td class="l">Report says the DSE Market Report was not yet published</td><td class="l">The exchange posts its PDF some time after the close. The page is complete except participation, bond trades and bids/offers; a later run fills them in automatically.</td></tr>
 <tr><td class="l">A fund row is missing</td><td class="l">That manager's website was unreachable or changed. The other rows are unaffected; the Build notes box at the end of the report says which source failed.</td></tr>
 <tr><td class="l">PDF missing, web page present</td><td class="l">Chromium failed to start. Run <code>.venv\\Scripts\\python -m playwright install chromium</code> (Windows) or <code>.venv/bin/python -m playwright install chromium</code>, then <i>2 · Rebuild a date</i>.</td></tr>
+<tr><td class="l">Nothing appears on the external drive</td><td class="l">Add the drive with menu choice <b>F</b> (a path typed into <code>REPORT_COPY_DIRS</code> works too). The drive must be connected when the generator runs; reports built while it was unplugged are copied on the next run with it connected, or at once with <b>F</b> → <i>c</i>. The run log says "not available now (drive not connected?)" when it was skipped.</td></tr>
 <tr><td class="l">Nothing was built for days</td><td class="l">The computer was off at the scheduled times, or the DSE site was unreachable. Run the menu once by hand; the job also completes any recent partial day it finds.</td></tr>
 </tbody></table>
 <p>For anything else, read <code>~/.the-ticker/run.log</code>: every run writes what it did and why it stopped.</p>"""),
@@ -109,7 +112,8 @@ REPORT_EMAIL_TO=you@gmail.com</pre></li>
 <tr><td class="l">market-report/index.html</td><td class="l">The newest report (becomes the live page if publishing is on)</td></tr>
 <tr><td class="l">market-report/archive/&lt;date&gt;.html, .pdf</td><td class="l">Every report; archive/index.html lists them</td></tr>
 <tr><td class="l">market-report/data/&lt;date&gt;.json</td><td class="l">The day's parsed dataset; history.json the 30-session series; state.json what was built last</td></tr>
-<tr><td class="l">Desktop › The Ticker Market Reports</td><td class="l">Your copies: one PDF and one HTML per trading day</td></tr>
+<tr><td class="l">Desktop › The Ticker Market Reports</td><td class="l">Your copies: one PDF and one HTML per trading day (plus the same in every extra folder from menu choice F)</td></tr>
+<tr><td class="l">START HERE.html</td><td class="l">This guide, in the project folder; the menu's choice 6 opens the same page</td></tr>
 <tr><td class="l">scripts/market_report/</td><td class="l">The generator (Python). narrative.py holds the wording; render.py the design</td></tr>
 <tr><td class="l">scripts/run_daily.*, scripts/schedule_*</td><td class="l">The runners and the scheduler installers</td></tr>
 <tr><td class="l">scripts/.env, scripts/recipients.txt</td><td class="l">Your settings and the e-mail list (never committed)</td></tr>
@@ -129,18 +133,22 @@ code{font-family:var(--mono); font-size:.92em; background:var(--card2); border-r
 .card .lbl{font-size:12.5px; font-weight:600; color:var(--ink2)} .card p.plain{margin-top:8px}
 table.data td.l{color:var(--ink2); font-weight:400} table.data td:first-child.l{color:var(--ink); font-weight:600}
 """
-    html = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Guide · DSE Daily Market Report · The Ticker</title>
+    def page(base: str) -> str:
+        return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Start here · DSE Daily Market Report · The Ticker</title>
 <meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#2c2015">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>{CSS}{extra}</style></head><body>
 <header class="mast"><div class="mast-in"><a class="wordmark" href="{SITE}" aria-label="The Ticker">{WORDMARK}</a>
-<div class="mast-meta"><div class="tag">DAR ES SALAAM STOCK EXCHANGE · DAILY MARKET REPORT</div><h1>How the report is made, and how to run it</h1>
+<div class="mast-meta"><div class="tag">DAR ES SALAAM STOCK EXCHANGE · DAILY MARKET REPORT</div><h1>Start here: how to run the report, and how it is made</h1>
 <div class="asof">A guide for whoever looks after the generator</div>
-<div class="actions"><a class="btn" href="./index.html">Latest report</a><a class="btn ghost" href="archive/index.html">Past reports</a><a class="btn ghost" href="{SITE}">The Ticker home</a></div></div></div></header>
+<div class="actions"><a class="btn" href="{base}index.html">Latest report</a><a class="btn ghost" href="{base}archive/index.html">Past reports</a><a class="btn ghost" href="{SITE}">The Ticker home</a></div></div></div></header>
 <nav class="nav" aria-label="Sections"><div class="nav-in">{toc}</div></nav>
 <main>{body}</main>
 <footer><div class="foot-bar">© <b>The Ticker</b> — all rights reserved.</div></footer></body></html>"""
     out = Path(out_dir) / "guide.html"
-    out.write_text(html, encoding="utf-8")
+    out.write_text(page("./"), encoding="utf-8")
+    root = Path(out_dir).parent
+    if (root / "scripts").exists():  # a copy at the top of the project folder, where a newcomer looks first
+        (root / "START HERE.html").write_text(page(f"{Path(out_dir).name}/"), encoding="utf-8")
     return out

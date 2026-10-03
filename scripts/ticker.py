@@ -58,6 +58,104 @@ def load_env():
 
 
 RECIPIENTS = ROOT / "scripts" / "recipients.txt"
+FOLDER_NAME = "The Ticker Market Reports"
+
+
+def candidate_drives() -> list[Path]:
+    """External drives and USB sticks connected right now."""
+    out: list[Path] = []
+    if WIN:
+        for letter in "DEFGHIJKLMNOPQRSTUVWXYZ":
+            p = Path(f"{letter}:/")
+            if p.exists():
+                out.append(p)
+    elif platform.system() == "Darwin":
+        root_dev = os.stat("/").st_dev
+        for p in sorted(Path("/Volumes").glob("*")):
+            try:
+                if p.is_dir() and os.stat(p).st_dev != root_dev:
+                    out.append(p)
+            except OSError:
+                pass
+    else:
+        import getpass  # noqa: PLC0415
+        for base in (Path("/media") / getpass.getuser(), Path("/run/media") / getpass.getuser(), Path("/mnt")):
+            if base.exists():
+                out += [p for p in sorted(base.iterdir()) if p.is_dir()]
+    return out
+
+
+def set_env_value(key: str, value: str) -> None:
+    """Set one line in scripts/.env (created from .env.example when missing)."""
+    env = ROOT / "scripts" / ".env"
+    if not env.exists():
+        ex = ROOT / "scripts" / ".env.example"
+        env.write_text(ex.read_text() if ex.exists() else "", encoding="utf-8")
+    lines = env.read_text(encoding="utf-8").splitlines()
+    done = False
+    for i, line in enumerate(lines):
+        if not line.strip().startswith("#") and line.split("=", 1)[0].strip() == key:
+            lines[i] = f"{key}={value}"
+            done = True
+    if not done:
+        lines.append(f"{key}={value}")
+    env.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    os.environ[key] = value
+
+
+def copy_dirs() -> list[str]:
+    return [p.strip().strip('"') for p in (os.environ.get("REPORT_COPY_DIRS") or "").split(";") if p.strip()]
+
+
+def sync_copies() -> None:
+    """Copy the reports already built to every copy folder that is connected now."""
+    py = ROOT / (".venv/Scripts/python.exe" if WIN else ".venv/bin/python")
+    if not py.exists():
+        print("  (the Python environment is created by the first report run; the copy happens then)")
+        return
+    subprocess.call([str(py), "-m", "scripts.market_report.build", "--sync-exports"], cwd=ROOT)
+
+
+def manage_copy_folders() -> None:
+    while True:
+        dirs = copy_dirs()
+        print(f"\n  Reports are always saved to: {export_dir()}")
+        print("  Extra folders that receive a copy of every report (for example an external SSD):")
+        for i, d in enumerate(dirs, 1):
+            print(f"   {i}. {d}" + ("" if Path(d).exists() else "   (not connected now)"))
+        if not dirs:
+            print("   (none yet)")
+        print("\n  a  Add a folder    r  Remove a folder    c  Copy existing reports to the folders now    b  Back")
+        c = input("  Choose: ").strip().lower()
+        if c == "a":
+            drives = candidate_drives()
+            if drives:
+                print("  Drives connected now:")
+                for i, d in enumerate(drives, 1):
+                    print(f"   {i}. {d}")
+            raw = input("  Drive number, or the full path of a folder: ").strip().strip('"')
+            if not raw:
+                continue
+            base = drives[int(raw) - 1] if raw.isdigit() and 1 <= int(raw) <= len(drives) else Path(raw).expanduser()
+            if not base.exists():
+                print(f"  {base} does not exist. Is the drive connected? Nothing changed.")
+                continue
+            dest = base if base.name == FOLDER_NAME else base / FOLDER_NAME
+            if str(dest) not in dirs:
+                dirs.append(str(dest))
+                set_env_value("REPORT_COPY_DIRS", ";".join(dirs))
+            print(f"  Saved. Every report is also copied to {dest}. Copying the existing reports now …")
+            sync_copies()
+        elif c == "r" and dirs:
+            n = input("  Number to remove: ").strip()
+            if n.isdigit() and 1 <= int(n) <= len(dirs):
+                removed = dirs.pop(int(n) - 1)
+                set_env_value("REPORT_COPY_DIRS", ";".join(dirs))
+                print(f"  Removed {removed} (the files already there are left alone).")
+        elif c == "c":
+            sync_copies()
+        else:
+            return
 
 
 def read_recipients() -> list[str]:
@@ -110,12 +208,13 @@ def menu():
         print("  1  Build / refresh the latest trading day")
         print("  2  Rebuild a specific date")
         print("  3  Open the latest report")
-        print("  4  Open the Desktop folder of reports")
+        print("  4  Open the folder of reports")
         print("  5  Install or remove the schedule")
         print("  6  Open the guide")
         print("  7  Show settings")
         print("  8  E-mail recipients (list / add / remove)")
         print("  9  Send a test e-mail of the latest report now")
+        print("  F  Report folders: add a second folder (e.g. an external SSD) or remove one")
         print("  U  Update the generator from GitHub (keeps your settings and reports)")
         print("  0  Quit")
         choice = input("\n  Choose: ").strip()
@@ -134,6 +233,8 @@ def menu():
                 open_path(ed)
             else:
                 print(f"  The folder does not exist yet ({ed}); it is created by the first finished report.")
+            for d in copy_dirs():
+                print(f"  Copies also go to {d}" + ("" if Path(d).exists() else "   (not connected now)"))
         elif choice == "5":
             sub = input("  (i)nstall or (r)emove? ").strip().lower()
             extra = []
@@ -151,7 +252,7 @@ def menu():
         elif choice == "7":
             env = ROOT / "scripts" / ".env"
             print(f"\n  Settings file: {env} ({'exists' if env.exists() else 'missing — copy scripts/.env.example to scripts/.env'})")
-            for k in ("REPORT_PUSH", "REPORT_EXPORT_DIR", "REPORT_SMTP_HOST", "REPORT_SMTP_USER", "REPORT_EMAIL_TO"):
+            for k in ("REPORT_PUSH", "REPORT_EXPORT_DIR", "REPORT_COPY_DIRS", "REPORT_SMTP_HOST", "REPORT_SMTP_USER", "REPORT_EMAIL_TO"):
                 print(f"  {k:<18} = {os.environ.get(k, '') or '(default)'}")
             print(f"  E-mail             = {'configured' if os.environ.get('REPORT_SMTP_HOST') else 'not set up'}; recipients file has {len(read_recipients())} address(es)")
             print(f"  Reports folder     = {export_dir()}")
@@ -166,6 +267,8 @@ def menu():
                 extra = input("  Send to (leave empty for the recipients list): ").strip()
                 cmd = [str(py if py.exists() else sys.executable), "-m", "scripts.market_report.emailer", "--test"] + (["--to", extra] if extra else [])
                 subprocess.call(cmd, cwd=ROOT)
+        elif choice.lower() == "f":
+            manage_copy_folders()
         elif choice.lower() == "u":
             subprocess.call([sys.executable, str(ROOT / "scripts" / "update.py")], cwd=ROOT)
             print("  Restart the menu to use the updated version.")

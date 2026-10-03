@@ -6,11 +6,12 @@ written so a first-time investor can follow it. **A small program on your own co
 after each trading day; nobody (and no AI model, and no cloud service) is in the loop.**
 
 **What you get:** one PDF (and a web-page copy) per trading day in **Desktop › The Ticker Market
-Reports**, e.g. `The Ticker - DSE Daily Market Report - 2026-10-01.pdf`. Publishing to the public
+Reports**, e.g. `The Ticker - DSE Daily Market Report - 2026-10-01.pdf`, and the same in any extra
+folder you add from the menu (choice F), such as an external SSD. Publishing to the public
 Ticker site is switched off by default and can be turned on later (see *Publishing*).
 
-Guide for whoever runs it: `market-report/guide.html` (open it in a browser) or the menu launcher
-`Ticker-Report.bat` / `Ticker-Report.command` in the repository folder.
+Guide for whoever runs it: `START HERE.html` in the project folder (the same page as
+`market-report/guide.html`), or the menu launcher `Ticker-Report.bat` / `Ticker-Report.command`.
 
 ## What is in the report
 
