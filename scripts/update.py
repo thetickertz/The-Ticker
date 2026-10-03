@@ -37,13 +37,37 @@ def project_root() -> Path:
 
 
 def download(branch: str) -> bytes | None:
+    """Fetch the branch ZIP. python.org builds of Python on macOS cannot verify certificates until
+    'Install Certificates.command' has been run, so fall back to the system's curl, then to the
+    project's own Python environment (which bundles certificates via requests)."""
     url = f"https://github.com/{REPO}/archive/refs/heads/{branch}.zip"
+    errors = []
     try:
         with urllib.request.urlopen(url, timeout=120) as r:
             return r.read()
     except Exception as e:  # noqa: BLE001
-        print(f"  could not download {branch}: {e}")
-        return None
+        errors.append(f"python: {e}")
+    if shutil.which("curl"):
+        try:
+            r = subprocess.run(["curl", "-fsSL", "--max-time", "180", url], capture_output=True, timeout=200)
+            if r.returncode == 0 and r.stdout[:2] == b"PK":
+                return r.stdout
+            errors.append(f"curl: exit {r.returncode}")
+        except Exception as e:  # noqa: BLE001
+            errors.append(f"curl: {e}")
+    root = project_root()
+    py = root / (".venv/Scripts/python.exe" if os.name == "nt" else ".venv/bin/python")
+    if py.exists():
+        try:
+            r = subprocess.run([str(py), "-c", "import requests,sys;sys.stdout.buffer.write(requests.get(sys.argv[1],timeout=180).content)", url],
+                               capture_output=True, timeout=240)
+            if r.returncode == 0 and r.stdout[:2] == b"PK":
+                return r.stdout
+            errors.append("venv: " + r.stderr.decode(errors="ignore")[-120:])
+        except Exception as e:  # noqa: BLE001
+            errors.append(f"venv: {e}")
+    print(f"  could not download {branch}: " + " | ".join(errors))
+    return None
 
 
 def main() -> int:
