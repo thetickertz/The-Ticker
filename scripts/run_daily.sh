@@ -63,6 +63,8 @@ if [ "$BUILT" = "true" ] && [ "${REPORT_PUSH:-0}" = "1" ] && [ "$HAVE_GIT" = 1 ]
 fi
 
 if [ "$BUILT" = "true" ] && [ "$COMPLETE" = "true" ] && [ "$PDF" = "true" ] && [ -n "${REPORT_SMTP_HOST:-}" ]; then
-  REPORT_DATE="$DATE" "$PY" -m scripts.market_report.emailer || echo "warning: e-mail failed"
+  REPORT_DATE="$DATE" "$PY" -m scripts.market_report.emailer || echo "warning: e-mail failed (see above)"
+elif [ "$BUILT" = "true" ] && [ -n "${REPORT_SMTP_HOST:-}" ]; then
+  echo "e-mail skipped: the day is not complete yet (preliminary edition); it is sent when the final edition is built"
 fi
 echo "=== done"

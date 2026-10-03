@@ -49,12 +49,34 @@ macOS/Linux   scripts/run_daily.sh</pre>
 <tr><td>5</td><td class="l">Install or remove the schedule</td></tr>
 <tr><td>6</td><td class="l">Open this guide</td></tr>
 <tr><td>7</td><td class="l">Show the current settings and where to change them</td></tr>
+<tr><td>8</td><td class="l">E-mail recipients: list, add or remove addresses</td></tr>
+<tr><td>9</td><td class="l">Send a test e-mail of the latest report now</td></tr>
 </tbody></table>
 <p>Command-line equivalents for scripts and automation:</p>
 <pre>python -m scripts.market_report.build                    # last trading day, if not built
 python -m scripts.market_report.build --date 2026-10-01 --force
 python -m scripts.market_report.build --no-pdf           # faster, web page only
 scripts/run_daily.sh --date 2026-10-01 --force           # same, plus commit/push/e-mail/export</pre>"""),
+    ("email", "E-mail delivery: start here", """
+<p>Every final edition can be e-mailed automatically, PDF attached and the one-minute summary in the body, to as many people as you like. Nothing is sent until you fill in the mail settings once.</p>
+<ol class="steps">
+  <li><b>Choose the sending mailbox.</b> Any mailbox that allows SMTP works. For <b>Gmail</b>: turn on 2-Step Verification at <a href="https://myaccount.google.com/security">myaccount.google.com/security</a>, then create an <b>App Password</b> at <a href="https://myaccount.google.com/apppasswords">myaccount.google.com/apppasswords</a> (call it "The Ticker") and copy the 16-character code. Your normal Gmail password will not work. For a <b>Microsoft 365 work account</b>: server <code>smtp.office365.com</code>, port 587, your e-mail address and password (IT must have SMTP AUTH enabled for the mailbox).</li>
+  <li><b>Put the settings in <code>scripts/.env</code></b> (open it with TextEdit or any editor):
+<pre>REPORT_SMTP_HOST=smtp.gmail.com
+REPORT_SMTP_PORT=587
+REPORT_SMTP_USER=you@gmail.com
+REPORT_SMTP_PASS=abcd efgh ijkl mnop      # the App Password, spaces optional
+REPORT_EMAIL_FROM=you@gmail.com
+REPORT_EMAIL_TO=you@gmail.com</pre></li>
+  <li><b>Add the other readers.</b> Open the menu (<code>Ticker-Report.command</code> / <code>Ticker-Report.bat</code>), choose <b>8</b> and add addresses one by one; they are kept in <code>scripts/recipients.txt</code>, one per line, which you can also edit by hand. Addresses in <code>REPORT_EMAIL_TO</code> and in the file are merged.</li>
+  <li><b>Send a test.</b> Menu choice <b>9</b> sends the latest report now with <i>[TEST]</i> in the subject, so you can confirm it arrives (check Spam the first time). From a terminal: <code>python3 -m scripts.market_report.emailer --test</code>.</li>
+</ol>
+<p>From then on every scheduled run that produces the <i>final</i> edition of a day e-mails it once. A preliminary edition (built before the exchange published its own report) is not e-mailed; the final one is. If a send fails, the reason is in <code>~/.the-ticker/run.log</code>; the report itself is still on your Desktop.</p>"""),
+    ("explanations", "How the explanations are written", """
+<p>No person and no AI writes the text each day. The sentences are <b>templates with rules</b> in <code>scripts/market_report/narrative.py</code>: the numbers fill the blanks and simple conditions pick the wording. For example the first bullet is built from the day's turnover and the previous session's:</p>
+<pre>"{turnover} worth of shares changed hands in {deals} deals — {ratio words} the {previous turnover}
+ traded the previous session."     ratio words: "about a third of", "about 3 times", "20% less than" …</pre>
+<p>Likewise "rose" / "fell" / "closed flat" come from the sign and size of the index change, "balanced" / "net inflow" / "net outflow" from the foreign flow relative to turnover, "on thin trading" from a turnover threshold, and the bond sentence from the share of the largest tenor. The same input always produces the same text, every figure quoted is the one in the tables, and the "what it means" column and the glossary are fixed explanations that do not change with the data. To change a wording, edit that file; nothing else is affected.</p>"""),
     ("numbers", "How the numbers are derived", """
 <table class="data"><thead><tr><th class="l">Figure</th><th class="l">Source and rule</th></tr></thead><tbody>
 <tr><td class="l">Turnover, volume, deals</td><td class="l">DSE price feed, reconciled with the total in the exchange's Market Report (the report wins if they differ).</td></tr>
@@ -89,7 +111,7 @@ scripts/run_daily.sh --date 2026-10-01 --force           # same, plus commit/pus
 <tr><td class="l">Desktop › The Ticker Market Reports</td><td class="l">Your copies: one PDF and one HTML per trading day</td></tr>
 <tr><td class="l">scripts/market_report/</td><td class="l">The generator (Python). narrative.py holds the wording; render.py the design</td></tr>
 <tr><td class="l">scripts/run_daily.*, scripts/schedule_*</td><td class="l">The runners and the scheduler installers</td></tr>
-<tr><td class="l">scripts/.env</td><td class="l">Your settings (never committed)</td></tr>
+<tr><td class="l">scripts/.env, scripts/recipients.txt</td><td class="l">Your settings and the e-mail list (never committed)</td></tr>
 </tbody></table>"""),
 ]
 

@@ -52,6 +52,49 @@ def load_env():
                 os.environ.setdefault(k.strip(), v.strip().strip('"'))
 
 
+RECIPIENTS = ROOT / "scripts" / "recipients.txt"
+
+
+def read_recipients() -> list[str]:
+    if not RECIPIENTS.exists():
+        return []
+    return [l.strip() for l in RECIPIENTS.read_text().splitlines() if l.strip() and not l.strip().startswith("#")]
+
+
+def write_recipients(addrs: list[str]):
+    RECIPIENTS.write_text("# One e-mail address per line. Lines starting with # are ignored.\n" + "\n".join(addrs) + ("\n" if addrs else ""))
+
+
+def manage_recipients():
+    while True:
+        addrs = read_recipients()
+        env_to = [a.strip() for a in (os.environ.get("REPORT_EMAIL_TO") or "").split(",") if a.strip()]
+        print("\n  Recipients list (scripts/recipients.txt):")
+        for i, a in enumerate(addrs, 1):
+            print(f"   {i}. {a}")
+        if not addrs:
+            print("   (empty)")
+        if env_to:
+            print("  Also from scripts/.env REPORT_EMAIL_TO: " + ", ".join(env_to))
+        print("\n  a  Add an address    r  Remove an address    b  Back")
+        c = input("  Choose: ").strip().lower()
+        if c == "a":
+            a = input("  E-mail address to add: ").strip()
+            if "@" in a and a.lower() not in [x.lower() for x in addrs]:
+                write_recipients(addrs + [a])
+                print(f"  added {a}")
+            else:
+                print("  not added (invalid or already listed)")
+        elif c == "r":
+            n = input("  Number to remove: ").strip()
+            if n.isdigit() and 1 <= int(n) <= len(addrs):
+                removed = addrs.pop(int(n) - 1)
+                write_recipients(addrs)
+                print(f"  removed {removed}")
+        else:
+            return
+
+
 def menu():
     load_env()
     while True:
@@ -64,6 +107,8 @@ def menu():
         print("  5  Install or remove the schedule")
         print("  6  Open the guide")
         print("  7  Show settings")
+        print("  8  E-mail recipients (list / add / remove)")
+        print("  9  Send a test e-mail of the latest report now")
         print("  0  Quit")
         choice = input("\n  Choose: ").strip()
         if choice == "1":
@@ -95,10 +140,21 @@ def menu():
         elif choice == "7":
             env = ROOT / "scripts" / ".env"
             print(f"\n  Settings file: {env} ({'exists' if env.exists() else 'missing — copy scripts/.env.example to scripts/.env'})")
-            for k in ("REPORT_PUSH", "REPORT_EXPORT_DIR", "REPORT_SMTP_HOST", "REPORT_EMAIL_TO"):
+            for k in ("REPORT_PUSH", "REPORT_EXPORT_DIR", "REPORT_SMTP_HOST", "REPORT_SMTP_USER", "REPORT_EMAIL_TO"):
                 print(f"  {k:<18} = {os.environ.get(k, '') or '(default)'}")
+            print(f"  E-mail             = {'configured' if os.environ.get('REPORT_SMTP_HOST') else 'not set up'}; recipients file has {len(read_recipients())} address(es)")
             print(f"  Reports folder     = {export_dir()}")
             print(f"  Log                = {Path.home() / '.the-ticker' / 'run.log'}")
+        elif choice == "8":
+            manage_recipients()
+        elif choice == "9":
+            if not os.environ.get("REPORT_SMTP_HOST"):
+                print("  E-mail is not set up yet. Fill in the REPORT_SMTP_* lines in scripts/.env (see the guide, section 'E-mail delivery').")
+            else:
+                py = ROOT / (".venv/Scripts/python.exe" if WIN else ".venv/bin/python")
+                extra = input("  Send to (leave empty for the recipients list): ").strip()
+                cmd = [str(py if py.exists() else sys.executable), "-m", "scripts.market_report.emailer", "--test"] + (["--to", extra] if extra else [])
+                subprocess.call(cmd, cwd=ROOT)
         elif choice in ("0", "q", ""):
             return 0
         else:

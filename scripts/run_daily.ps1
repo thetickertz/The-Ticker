@@ -80,6 +80,8 @@ if ($out["built"] -eq "true" -and $env:REPORT_PUSH -eq "1" -and $haveGit) {
 if ($out["built"] -eq "true" -and $out["complete"] -eq "true" -and $out["pdf"] -eq "true" -and $env:REPORT_SMTP_HOST) {
   $env:REPORT_DATE = $out["date"]
   & $py -m scripts.market_report.emailer
+} elseif ($out["built"] -eq "true" -and $env:REPORT_SMTP_HOST) {
+  Write-Host "e-mail skipped: the day is not complete yet (preliminary edition); it is sent when the final edition is built"
 }
 Write-Host "=== done"
 Stop-Transcript | Out-Null
