@@ -109,6 +109,7 @@ def menu():
         print("  7  Show settings")
         print("  8  E-mail recipients (list / add / remove)")
         print("  9  Send a test e-mail of the latest report now")
+        print("  U  Update the generator from GitHub (keeps your settings and reports)")
         print("  0  Quit")
         choice = input("\n  Choose: ").strip()
         if choice == "1":
@@ -155,6 +156,10 @@ def menu():
                 extra = input("  Send to (leave empty for the recipients list): ").strip()
                 cmd = [str(py if py.exists() else sys.executable), "-m", "scripts.market_report.emailer", "--test"] + (["--to", extra] if extra else [])
                 subprocess.call(cmd, cwd=ROOT)
+        elif choice.lower() == "u":
+            subprocess.call([sys.executable, str(ROOT / "scripts" / "update.py")], cwd=ROOT)
+            print("  Restart the menu to use the updated version.")
+            return 0
         elif choice in ("0", "q", ""):
             return 0
         else:

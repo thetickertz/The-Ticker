@@ -32,10 +32,11 @@ def env(k, default=None):
     return (os.environ.get(k) or "").strip() or default  # '' counts as unset
 
 
-def recipients(extra: str | None = None) -> list[str]:
+def recipients(only: str | None = None) -> list[str]:
+    """The configured list (REPORT_EMAIL_TO + scripts/recipients.txt), or just `only` when given."""
     seen, out = set(), []
-    sources = [extra or "", env("REPORT_EMAIL_TO", "")]
-    if RECIPIENTS_FILE.exists():
+    sources = [only] if only else [env("REPORT_EMAIL_TO", "")]
+    if not only and RECIPIENTS_FILE.exists():
         sources.append(",".join(l.strip() for l in RECIPIENTS_FILE.read_text().splitlines()
                                 if l.strip() and not l.strip().startswith("#")))
     for src in sources:
@@ -65,7 +66,7 @@ def main(argv=None) -> int:
         print("nothing built yet — run the report first")
         return 1
     host = env("REPORT_SMTP_HOST")
-    to = recipients(args.to) if args.to else recipients()
+    to = recipients(args.to)
     if not host:
         print("e-mail not configured: set REPORT_SMTP_HOST (and user/password) in scripts/.env")
         return 2
