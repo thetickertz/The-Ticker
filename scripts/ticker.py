@@ -128,13 +128,16 @@ def menu():
             else:
                 print(f"  The folder does not exist yet ({ed}); it is created by the first finished report.")
         elif choice == "5":
+            sub = input("  (i)nstall or (r)emove? ").strip().lower()
+            extra = []
+            if not sub.startswith("r"):
+                t = input("  Time of day in East Africa Time, Monday to Friday [18:30]: ").strip() or "18:30"
+                extra = (["-Time", t] if WIN else ["--time", t])
             if WIN:
-                sub = input("  (i)nstall or (r)emove? ").strip().lower()
                 args = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(ROOT / "scripts" / "schedule_windows.ps1")]
-                subprocess.call(args + (["-Remove"] if sub.startswith("r") else []), cwd=ROOT)
+                subprocess.call(args + (["-Remove"] if sub.startswith("r") else extra), cwd=ROOT)
             else:
-                sub = input("  (i)nstall or (r)emove? ").strip().lower()
-                subprocess.call(["bash", str(ROOT / "scripts" / "schedule_unix.sh")] + (["--remove"] if sub.startswith("r") else []), cwd=ROOT)
+                subprocess.call(["bash", str(ROOT / "scripts" / "schedule_unix.sh")] + (["--remove"] if sub.startswith("r") else extra), cwd=ROOT)
         elif choice == "6":
             g = ROOT / "market-report" / "guide.html"
             open_path(g) if g.exists() else webbrowser.open(SITE + "guide.html")

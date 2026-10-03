@@ -27,7 +27,7 @@ to the live site.</p>
     <pre>Windows   powershell -ExecutionPolicy Bypass -File scripts\\run_daily.ps1
 macOS/Linux   scripts/run_daily.sh</pre>
     The first run creates a private Python environment and downloads Chromium for the PDF (two or three minutes). Every later run takes about a minute.</li>
-  <li><b>Put it on a timer.</b> From the menu choose <i>5</i>, or run <code>scripts\\schedule_windows.ps1</code> (Windows Task Scheduler) or <code>scripts/schedule_unix.sh</code> (cron). The job runs on weekdays at 16:40, 18:40 and 20:40 East Africa Time and at 08:10 the next morning, converted to your computer's clock. The computer must be on, or allowed to wake, at those times; a missed slot is simply picked up by the next one.</li>
+  <li><b>Put it on a timer.</b> From the menu choose <i>5</i>, or run <code>scripts\\schedule_windows.ps1</code> (Windows Task Scheduler) or <code>scripts/schedule_unix.sh</code> (cron). The job runs <b>every working day at 18:30 East Africa Time</b> (the market closes at 16:00), converted to your computer's clock; you can choose another time when installing. The computer must be on, or allowed to wake, at that time; if it was off, the next day's run also completes the missed day.</li>
 </ol>"""),
     ("daily", "What happens on a normal day", """
 <ol class="steps">
@@ -37,7 +37,7 @@ macOS/Linux   scripts/run_daily.sh</pre>
   <li>It copies the PDF and the web page to <b>Desktop › The Ticker Market Reports</b>, named <code>The Ticker - DSE Daily Market Report - 2026-10-01.pdf</code> and <code>.html</code>. This folder is the deliverable: open the PDF, print it, or forward it.</li>
   <li>With SMTP settings it e-mails the PDF; with <code>REPORT_PUSH=1</code> it also commits and pushes to the public site.</li>
 </ol>
-<p>If the exchange has not yet posted its Market Report when a run happens, the report is still built from the price feed (prices, indices, movers, auctions, funds) with a note that participation and bond details will follow. The Desktop copy is named <i>(preliminary)</i>; a later run, even days later, builds the complete edition and replaces it.</p>
+<p>If the exchange has not yet posted its Market Report at 18:30, the report is still built from the price feed (prices, indices, movers, auctions, funds) with a note that participation and bond details will follow. The Desktop copy is named <i>(preliminary)</i>; the next run, even the following day, builds the complete edition, replaces it and e-mails it.</p>
 <p>Logs: <code>~/.the-ticker/run.log</code> (Windows: <code>%USERPROFILE%\\.the-ticker\\run.log</code>).</p>"""),
     ("menu", "The menu launcher", """
 <p><code>Ticker-Report.bat</code> / <code>Ticker-Report.command</code> open a small menu so nothing has to be typed:</p>
@@ -72,7 +72,7 @@ REPORT_EMAIL_TO=you@gmail.com</pre></li>
   <li><b>Add the other readers.</b> Open the menu (<code>Ticker-Report.command</code> / <code>Ticker-Report.bat</code>), choose <b>8</b> and add addresses one by one; they are kept in <code>scripts/recipients.txt</code>, one per line, which you can also edit by hand. Addresses in <code>REPORT_EMAIL_TO</code> and in the file are merged.</li>
   <li><b>Send a test.</b> Menu choice <b>9</b> sends the latest report now with <i>[TEST]</i> in the subject, so you can confirm it arrives (check Spam the first time). From a terminal: <code>python3 -m scripts.market_report.emailer --test</code>.</li>
 </ol>
-<p>From then on every scheduled run that produces the <i>final</i> edition of a day e-mails it once. A preliminary edition (built before the exchange published its own report) is not e-mailed; the final one is. If a send fails, the reason is in <code>~/.the-ticker/run.log</code>; the report itself is still on your Desktop.</p>"""),
+<p>From then on the 18:30 run e-mails the day's report to everyone on the list. If the exchange has not yet published its own Market Report at that time, the e-mail is marked <i>(preliminary)</i> and the final edition is sent automatically when a later run completes the day (set <code>REPORT_EMAIL_PRELIMINARY=0</code> in <code>scripts/.env</code> to receive only final editions). If a send fails, the reason is in <code>~/.the-ticker/run.log</code>; the report itself is still on your Desktop.</p>"""),
     ("explanations", "How the explanations are written", """
 <p>No person and no AI writes the text each day. The sentences are <b>templates with rules</b> in <code>scripts/market_report/narrative.py</code>: the numbers fill the blanks and simple conditions pick the wording. For example the first bullet is built from the day's turnover and the previous session's:</p>
 <pre>"{turnover} worth of shares changed hands in {deals} deals — {ratio words} the {previous turnover}

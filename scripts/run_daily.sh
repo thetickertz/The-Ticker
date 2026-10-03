@@ -42,7 +42,9 @@ BUILT="$(grep -m1 '^built=' "$OUT" | cut -d= -f2 || true)"
 DATE="$(grep -m1 '^date=' "$OUT" | cut -d= -f2 || true)"
 COMPLETE="$(grep -m1 '^complete=' "$OUT" | cut -d= -f2 || true)"
 PDF="$(grep -m1 '^pdf=' "$OUT" | cut -d= -f2 || true)"
+REASON="$(grep -m1 '^reason=' "$OUT" | cut -d= -f2 || true)"
 SUMMARY="$(grep -m1 '^summary=' "$OUT" | cut -d= -f2- || true)"
+COMPLETED="$(grep -m1 '^completed=' "$OUT" | cut -d= -f2- || true)"
 rm -f "$OUT"
 
 if [ "$BUILT" = "true" ] && [ "${REPORT_PUSH:-0}" = "1" ] && [ "$HAVE_GIT" = 1 ]; then
@@ -62,9 +64,17 @@ if [ "$BUILT" = "true" ] && [ "${REPORT_PUSH:-0}" = "1" ] && [ "$HAVE_GIT" = 1 ]
   fi
 fi
 
-if [ "$BUILT" = "true" ] && [ "$COMPLETE" = "true" ] && [ "$PDF" = "true" ] && [ -n "${REPORT_SMTP_HOST:-}" ]; then
-  REPORT_DATE="$DATE" "$PY" -m scripts.market_report.emailer || echo "warning: e-mail failed (see above)"
-elif [ "$BUILT" = "true" ] && [ -n "${REPORT_SMTP_HOST:-}" ]; then
-  echo "e-mail skipped: the day is not complete yet (preliminary edition); it is sent when the final edition is built"
+if [ -n "${REPORT_SMTP_HOST:-}" ]; then
+  # final editions of earlier days completed in this run (the exchange's report arrived late)
+  for cd_ in $(echo "$COMPLETED" | tr ',' ' '); do
+    REPORT_DATE="$cd_" "$PY" -m scripts.market_report.emailer || echo "warning: e-mail for $cd_ failed"
+  done
+  if [ "$BUILT" = "true" ] && [ "$PDF" = "true" ] && [ "$REASON" = "built" ]; then
+    if [ "$COMPLETE" = "true" ] || [ "${REPORT_EMAIL_PRELIMINARY:-1}" = "1" ]; then
+      REPORT_DATE="$DATE" "$PY" -m scripts.market_report.emailer || echo "warning: e-mail failed (see above)"
+    else
+      echo "e-mail skipped: preliminary edition (REPORT_EMAIL_PRELIMINARY=0); the final edition will be sent"
+    fi
+  fi
 fi
 echo "=== done"

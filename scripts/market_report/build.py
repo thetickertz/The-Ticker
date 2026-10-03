@@ -272,7 +272,7 @@ def main(argv=None) -> int:
     http = Http()
     dse = DSE(http)
     builder = Builder(site.data_dir, http, log)
-    outcome = {"built": "false", "date": "", "complete": "false", "pdf": "false", "summary": "", "reason": ""}
+    outcome = {"built": "false", "date": "", "complete": "false", "pdf": "false", "summary": "", "reason": "", "completed": ""}
     try:
         if args.date == "auto":
             d = dse.last_trade_date()
@@ -310,8 +310,10 @@ def main(argv=None) -> int:
                             builder.notes.clear()
                             ds2 = builder.build(pd_, prev_loader=lambda q: load_json(site.data_dir / f"{iso(q)}.json", None))
                             if ds2["sources"]["dse_report_found"]:
-                                site.write_day(ds2)
+                                _, pdf2 = site.write_day(ds2)
                                 outcome["built"] = "true"
+                                if pdf2:
+                                    outcome["completed"] = ",".join(x_ for x_ in (outcome["completed"], x["date"]) if x_)
                         except Exception as e:  # noqa: BLE001
                             log(f"could not complete {x['date']}: {e}")
 

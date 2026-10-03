@@ -77,11 +77,20 @@ if ($out["built"] -eq "true" -and $env:REPORT_PUSH -eq "1" -and $haveGit) {
   }
 }
 
-if ($out["built"] -eq "true" -and $out["complete"] -eq "true" -and $out["pdf"] -eq "true" -and $env:REPORT_SMTP_HOST) {
-  $env:REPORT_DATE = $out["date"]
-  & $py -m scripts.market_report.emailer
-} elseif ($out["built"] -eq "true" -and $env:REPORT_SMTP_HOST) {
-  Write-Host "e-mail skipped: the day is not complete yet (preliminary edition); it is sent when the final edition is built"
+if ($env:REPORT_SMTP_HOST) {
+  # final editions of earlier days completed in this run (the exchange's report arrived late)
+  foreach ($cd in ($out["completed"] -split ",")) {
+    if ($cd) { $env:REPORT_DATE = $cd; & $py -m scripts.market_report.emailer }
+  }
+  $prelimOk = (-not $env:REPORT_EMAIL_PRELIMINARY) -or ($env:REPORT_EMAIL_PRELIMINARY -eq "1")
+  if ($out["built"] -eq "true" -and $out["pdf"] -eq "true" -and $out["reason"] -eq "built") {
+    if ($out["complete"] -eq "true" -or $prelimOk) {
+      $env:REPORT_DATE = $out["date"]
+      & $py -m scripts.market_report.emailer
+    } else {
+      Write-Host "e-mail skipped: preliminary edition (REPORT_EMAIL_PRELIMINARY=0); the final edition will be sent"
+    }
+  }
 }
 Write-Host "=== done"
 Stop-Transcript | Out-Null

@@ -49,8 +49,8 @@ the result to GitHub so the public page updates.
    - macOS / Linux: `scripts/run_daily.sh`
    The report appears in **Desktop › The Ticker Market Reports** (PDF and HTML) and in `market-report/`
    inside the repository.
-5. Install the schedule (weekdays 16:40, 18:40, 20:40 and next-morning 08:10, East Africa Time —
-   converted to your computer's time zone automatically):
+5. Install the schedule (every working day at 18:30 East Africa Time, converted to your computer's time
+   zone automatically; pass `--time HH:MM` / `-Time HH:MM` for another time):
    - Windows: `powershell -ExecutionPolicy Bypass -File scripts\schedule_windows.ps1`
      (creates a Task Scheduler job named *The Ticker - DSE Daily Market Report*; it wakes the PC and
      catches up if a start was missed; `-Remove` deletes it)
