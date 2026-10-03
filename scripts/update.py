@@ -22,6 +22,7 @@ import zipfile
 from pathlib import Path
 
 REPO = "thetickertz/The-Ticker"
+FALLBACK_BRANCHES = ["main", "claude/automated-market-report-i53qpm"]  # tried in order; first one that contains the generator wins
 KEEP = {"scripts/.env", "scripts/recipients.txt"}
 REPLACE_DIRS = ["scripts"]
 REPLACE_FILES = ["Ticker-Report.bat", "Ticker-Report.command", "market-report/README.md"]
@@ -48,27 +49,27 @@ def download(branch: str) -> bytes | None:
 def main() -> int:
     root = project_root()
     print(f"Updating the generator in {root}")
-    branches = []
+    branches = [a for a in sys.argv[1:] if a and not a.startswith("-")]
     sb = root / "scripts" / "SOURCE_BRANCH"
     if sb.exists() and sb.read_text().strip():
         branches.append(sb.read_text().strip())
-    if "main" not in branches:
-        branches.append("main")
-    data = None
-    for b in branches:
-        print(f"  downloading {b} …")
-        data = download(b)
-        if data:
-            break
-    if not data:
-        print("Update failed: nothing could be downloaded. Check the internet connection.")
-        return 1
+    branches += [b for b in FALLBACK_BRANCHES if b not in branches]
     with tempfile.TemporaryDirectory() as tmp:
-        zf = zipfile.ZipFile(io.BytesIO(data))
-        zf.extractall(tmp)
-        top = next(p for p in Path(tmp).iterdir() if p.is_dir())
-        if not (top / "scripts" / "market_report").exists():
-            print("Update failed: the downloaded copy does not contain the generator (is the branch right?)")
+        top = None
+        for b in branches:
+            print(f"  downloading {b} …")
+            data = download(b)
+            if not data:
+                continue
+            sub = Path(tmp) / b.replace("/", "-")
+            zipfile.ZipFile(io.BytesIO(data)).extractall(sub)
+            cand = next((p for p in sub.iterdir() if p.is_dir()), None)
+            if cand and (cand / "scripts" / "market_report").exists():
+                top = cand
+                break
+            print(f"  {b} does not contain the generator; trying the next one")
+        if top is None:
+            print("Update failed: no downloadable copy contains the generator. Check the internet connection.")
             return 1
         for d in REPLACE_DIRS:
             src, dst = top / d, root / d
