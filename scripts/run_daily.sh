@@ -13,7 +13,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 LOGDIR="${HOME}/.the-ticker"; mkdir -p "$LOGDIR"
 exec > >(tee -a "$LOGDIR/run.log") 2>&1
-echo "=== $(date '+%Y-%m-%d %H:%M:%S %Z') run_daily $*"
+echo "=== $(date '+%Y-%m-%d %H:%M:%S %Z') run_daily $* (generator $(head -c 7 scripts/VERSION 2>/dev/null || echo 'version not recorded'))"
 
 if [ -f scripts/.env ]; then set -a; . scripts/.env; set +a; fi
 # macOS flags downloaded files as quarantined and then refuses to open Ticker-Report.command; clear it

@@ -103,7 +103,9 @@ def manage_recipients():
 def menu():
     load_env()
     while True:
-        print("\n  The Ticker · DSE Daily Market Report")
+        vf = ROOT / "scripts" / "VERSION"
+        ver = vf.read_text().strip()[:7] if vf.exists() else ""
+        print("\n  The Ticker · DSE Daily Market Report" + (f"   (generator {ver})" if ver else "   (generator version not recorded — press U to update)"))
         print("  ───────────────────────────────────")
         print("  1  Build / refresh the latest trading day")
         print("  2  Rebuild a specific date")

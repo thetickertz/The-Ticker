@@ -4,6 +4,7 @@ __pycache__/
 .venv/
 scripts/.env
 scripts/recipients.txt
+scripts/VERSION
 # Generated reports stay on this computer until you decide to publish (see scripts/.env REPORT_PUSH).
 market-report/index.html
 market-report/archive/
