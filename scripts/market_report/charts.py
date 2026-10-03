@@ -45,7 +45,7 @@ def share_bars(items: list[tuple[str, float, str]], width=600, bar_h=18, gap=10,
 
 
 def grouped_columns(groups: list[tuple[str, list[float | None]]], series: list[str], colors: list[str],
-                    unit="%", width=360, height=230, ymax=100.0, aria="") -> str:
+                    unit="%", width=360, height=180, ymax=100.0, aria="") -> str:
     """Grouped columns, one axis. groups: [(group label, [v_series0, v_series1...])]."""
     P = {"t": 22, "r": 10, "b": 30, "l": 36}
     pw, ph = width - P["l"] - P["r"], height - P["t"] - P["b"]
@@ -83,7 +83,7 @@ def grouped_columns(groups: list[tuple[str, list[float | None]]], series: list[s
     return "".join(out)
 
 
-def tenor_columns(by_term: list[dict], key: str, unit: str, dp: int, width=360, height=220, aria="") -> str:
+def tenor_columns(by_term: list[dict], key: str, unit: str, dp: int, width=360, height=160, aria="") -> str:
     """One column per tenor for a single measure (WA price or WA yield). Tenors with no trades
     get an empty slot labelled 'no trades' so the x-axis stays comparable day to day."""
     P = {"t": 24, "r": 10, "b": 34, "l": 40}

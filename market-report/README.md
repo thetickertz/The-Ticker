@@ -27,7 +27,7 @@ Guide for whoever runs it: `market-report/guide.html` (open it in a browser) or 
 | Glossary, sources, disclaimer | static | — |
 
 Everything in the report is traceable: `data/YYYY-MM-DD.json` holds the exact parsed dataset
-for each day, and the footer links to the official publications.
+for each day, and the web page's footer links to the official publications.
 
 ## How the automation runs — from your own computer
 
@@ -120,7 +120,7 @@ is skipped. (Gmail works with an app password; Microsoft 365 with SMTP AUTH enab
   the ETF NAVs are not published in a scrapable form today; add a function in `cis.py` returning the
   same dict shape and append it to `collect()`.
 - **DSE Market Report format.** The parser keys off the report's table headers. If the exchange
-  changes the layout, the page still builds from the JSON feed and the footer "Build notes" says what
+  changes the layout, the page still builds from the JSON feed and the "Build notes" box at the end of the report says what
   was skipped; fix `parse_report()` in `dse.py` and re-run with `--force`.
 - **Holidays.** The build keys off the DSE's own last-trading-day endpoint, so public holidays need no
   calendar.

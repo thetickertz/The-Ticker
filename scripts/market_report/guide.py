@@ -99,7 +99,7 @@ REPORT_EMAIL_TO=you@gmail.com</pre></li>
 <tr><td class="l">macOS: nothing runs while the lid is closed</td><td class="l">The Mac must be awake at the scheduled times: in System Settings → Battery (or Energy) prevent sleeping on power, or keep it plugged in and awake in the late afternoon.</td></tr>
 <tr><td class="l">"DSE has no equity data dated … yet" / "session may still be open"</td><td class="l">Normal before the exchange has closed and processed the day. The next scheduled slot will build it.</td></tr>
 <tr><td class="l">Report says the DSE Market Report was not yet published</td><td class="l">The exchange posts its PDF some time after the close. The page is complete except participation, bond trades and bids/offers; a later run fills them in automatically.</td></tr>
-<tr><td class="l">A fund row is missing</td><td class="l">That manager's website was unreachable or changed. The other rows are unaffected; the footer notes which source failed.</td></tr>
+<tr><td class="l">A fund row is missing</td><td class="l">That manager's website was unreachable or changed. The other rows are unaffected; the Build notes box at the end of the report says which source failed.</td></tr>
 <tr><td class="l">PDF missing, web page present</td><td class="l">Chromium failed to start. Run <code>.venv\\Scripts\\python -m playwright install chromium</code> (Windows) or <code>.venv/bin/python -m playwright install chromium</code>, then <i>2 · Rebuild a date</i>.</td></tr>
 <tr><td class="l">Nothing was built for days</td><td class="l">The computer was off at the scheduled times, or the DSE site was unreachable. Run the menu once by hand; the job also completes any recent partial day it finds.</td></tr>
 </tbody></table>

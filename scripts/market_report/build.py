@@ -62,8 +62,7 @@ def make_pdf(html_path: Path, pdf_path: Path, title: str) -> bool:
               'padding:0 11mm;display:flex;justify-content:space-between"><span>The Ticker · DSE Daily Market Report</span>'
               f'<span>{title}</span></div>')
     footer = ('<div style="font-family:IBM Plex Sans,Arial,sans-serif;font-size:8px;color:#8f7e69;width:100%;'
-              'padding:0 11mm;display:flex;justify-content:space-between"><span>thetickertz.github.io/The-Ticker · educational summary, not investment advice</span>'
-              '<span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span></div>')
+              'padding:0 11mm;text-align:right">Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>')
     # Allow pointing at a pre-installed Chromium (e.g. PLAYWRIGHT_CHROMIUM_PATH=/opt/pw-browsers/chromium-1194/chrome-linux/chrome)
     exe = os.environ.get("PLAYWRIGHT_CHROMIUM_PATH")
     if not exe:
