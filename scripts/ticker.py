@@ -122,7 +122,7 @@ def manage_copy_folders() -> None:
         print(f"\n  Reports are always saved to: {export_dir()}")
         print("  Extra folders that receive a copy of every report (for example an external SSD):")
         for i, d in enumerate(dirs, 1):
-            print(f"   {i}. {d}" + ("" if Path(d).exists() else "   (not connected now)"))
+            print(f"   {i}. {d}" + ("" if (Path(d).exists() or Path(d).parent.exists()) else "   (not connected now)"))
         if not dirs:
             print("   (none yet)")
         print("\n  a  Add a folder    r  Remove a folder    c  Copy existing reports to the folders now    b  Back")
@@ -234,7 +234,7 @@ def menu():
             else:
                 print(f"  The folder does not exist yet ({ed}); it is created by the first finished report.")
             for d in copy_dirs():
-                print(f"  Copies also go to {d}" + ("" if Path(d).exists() else "   (not connected now)"))
+                print(f"  Copies also go to {d}" + ("" if (Path(d).exists() or Path(d).parent.exists()) else "   (not connected now)"))
         elif choice == "5":
             sub = input("  (i)nstall or (r)emove? ").strip().lower()
             extra = []
