@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import os
 import platform
+import shutil
 import subprocess
 import sys
 import webbrowser
@@ -13,6 +14,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 WIN = platform.system() == "Windows"
+if platform.system() == "Darwin" and shutil.which("xattr"):
+    # a downloaded copy is "quarantined" and Finder refuses to open Ticker-Report.command; clear the flag
+    subprocess.call(["xattr", "-dr", "com.apple.quarantine", str(ROOT / "Ticker-Report.command"), str(ROOT / "scripts")],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 SITE = "https://thetickertz.github.io/The-Ticker/market-report/"
 
 

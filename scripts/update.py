@@ -36,6 +36,16 @@ def project_root() -> Path:
     return Path.cwd()
 
 
+def unquarantine(root: Path) -> None:
+    """macOS marks files that came from a browser download (or a ZIP of one) as quarantined, and
+    Finder then refuses to open Ticker-Report.command ("Apple could not verify ... is free of
+    malware"). Clearing the flag on the program files is what the user would otherwise do by hand."""
+    if sys.platform != "darwin" or not shutil.which("xattr"):
+        return
+    targets = [str(root / f) for f in REPLACE_FILES if (root / f).exists()] + [str(root / d) for d in REPLACE_DIRS if (root / d).exists()]
+    subprocess.call(["xattr", "-dr", "com.apple.quarantine", *targets], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
 def download(branch: str) -> bytes | None:
     """Fetch the branch ZIP. python.org builds of Python on macOS cannot verify certificates until
     'Install Certificates.command' has been run, so fall back to the system's curl, then to the
@@ -116,6 +126,7 @@ def main() -> int:
         for ex in (root / "Ticker-Report.command", root / "scripts" / "run_daily.sh", root / "scripts" / "schedule_unix.sh"):
             if ex.exists():
                 ex.chmod(ex.stat().st_mode | 0o755)
+        unquarantine(root)
     # refresh the Python packages inside the existing environment, if there is one
     py = root / (".venv/Scripts/python.exe" if os.name == "nt" else ".venv/bin/python")
     if py.exists():

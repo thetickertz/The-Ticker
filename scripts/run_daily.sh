@@ -16,6 +16,8 @@ exec > >(tee -a "$LOGDIR/run.log") 2>&1
 echo "=== $(date '+%Y-%m-%d %H:%M:%S %Z') run_daily $*"
 
 if [ -f scripts/.env ]; then set -a; . scripts/.env; set +a; fi
+# macOS flags downloaded files as quarantined and then refuses to open Ticker-Report.command; clear it
+if [ "$(uname -s)" = Darwin ] && command -v xattr >/dev/null 2>&1; then xattr -dr com.apple.quarantine Ticker-Report.command scripts 2>/dev/null || true; fi
 
 PY=.venv/bin/python
 if [ ! -x "$PY" ]; then
