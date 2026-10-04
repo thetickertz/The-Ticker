@@ -277,8 +277,8 @@
    Every value must come from a Bank of Tanzania (or NBS) publication.
    ════════════════════════════════════════════════════════════════════ */
 const DATA = { /* INJECT-DATA */
-  asOf: "2026-09-30",
-  updateLine: "Auto-refreshed from BOT releases · last built 30 Sep 2026",
+  asOf: "2026-10-04",
+  updateLine: "Auto-refreshed from BOT releases · last built 4 Oct 2026",
   tape: [
     {label:"CBR", value:"6.25%", dir:"up"},
     {label:"REDISCOUNT", value:"8.75%", dir:"up"},
@@ -292,7 +292,7 @@ const DATA = { /* INJECT-DATA */
     {label:"15Y BOND", value:"10.791%", dir:"up"},
     {label:"20Y BOND", value:"11.331%", dir:"up"},
     {label:"25Y BOND", value:"11.480%", dir:"dn"},
-    {label:"TZS/USD", value:"2,654.76", dir:"dn"},
+    {label:"TZS/USD", value:"2,652.38", dir:"up"},
     {label:"IBCM 7-DAY", value:"6.41%", dir:"up"}
   ],
   sources: [
@@ -465,7 +465,7 @@ const DATA = { /* INJECT-DATA */
     {t:"2025-12",v:2447.5},{t:"2026-01",v:2518.1},{t:"2026-02",v:2542.5},
     {t:"2026-03",v:2577.4},{t:"2026-04",v:2602},{t:"2026-05",v:2609.2},
     {t:"2026-06",v:2623.5},{t:"2026-07",v:2649.7},
-    {t:"2026-09-30",v:2654.76,note:"Latest BOT indicative selling rate (buying 2,628.48)"}
+    {t:"2026-10-04",v:2652.38,note:"Latest BOT indicative selling rate (buying 2,626.12)"}
   ],
   calendar: []
 };
@@ -975,9 +975,9 @@ function buildMarket(){
   secHead(sec,"Market Snapshot","The wider picture",
     'The backdrop every yield trades against: the shilling, the country’s FX buffers, and how fast money and credit are growing.');
   const g=el("div","grid c3"); sec.append(g);
-  tile(g,{label:"TZS / USD", value:"2,654.76", unit:"TZS", delta:"weaker y/y", dir:"up",
-    sub:"BOT selling rate · 30 Sep 2026 (buying 2,628.48)",
-    plain:"It takes 2,654.76 shillings to buy a dollar — about 9% more than a year ago. On this chart, up = weaker shilling.",
+  tile(g,{label:"TZS / USD", value:"2,652.38", unit:"TZS", delta:"weaker y/y", dir:"up",
+    sub:"BOT selling rate · 4 Oct 2026 (buying 2,626.12)",
+    plain:"It takes 2,652.38 shillings to buy a dollar — about 8% more than a year ago. On this chart, up = weaker shilling.",
     econ:"A weaker shilling makes imports (fuel, fertiliser) pricier — one of the channels behind the inflation climb.",
     mkt:"FX weakness pressures BOT to keep policy tight, which supports higher yields."});
   tile(g,{label:"FX reserves", value:"6.20", unit:"USD bn", delta:"4.8 months cover", dir:"up",
