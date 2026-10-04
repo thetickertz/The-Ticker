@@ -18,7 +18,7 @@
   --ink:#17241d; --ink2:#4a5a51; --muted:#5f6e65;
   --border:#dbe3de; --border2:#aebbb3;
   --bad:#b3261e; --bad-soft:#fdeceb; --warn:#8a6d00; --warn-soft:#fdf6df;
-  --blue:#2b5e8c; --blue-soft:#e8f1f8;
+  --blue:#2b5e8c; --blue-soft:#e8f1f8; --purp:#6b4a97; --purp-soft:#f1ebf8;
   --sans:"Tembolic","Avenir Next","Helvetica Neue",system-ui,-apple-system,"Segoe UI",sans-serif;
   --shadow:0 1px 2px rgba(23,36,29,.06), 0 6px 24px rgba(23,36,29,.07);
   --r:12px;
@@ -97,6 +97,7 @@ a{ color:var(--green); }
 .tile.t-pen{ border-left-color:var(--warn) }
 .tile.t-awa{ border-left-color:var(--blue) }
 .tile.t-opn{ border-left-color:var(--bad) }
+.tile.t-dse{ border-left-color:var(--purp) }
 .tile.t-avg{ border-left-color:var(--gold) }
 
 /* category breakdown */
@@ -150,6 +151,7 @@ td.c-cat{ max-width:150px }
 .chip.pending{ background:var(--warn-soft); color:var(--warn); border-color:#e8d99a }
 .chip.awaiting{ background:var(--blue-soft); color:var(--blue); border-color:#bdd4e7 }
 .chip.open{ background:var(--bad-soft); color:var(--bad); border-color:#efb9b5 }
+.chip.dse{ background:var(--purp-soft); color:var(--purp); border-color:#d6c8ea }
 .age-hot{ color:var(--bad); font-weight:700 }
 .empty{ text-align:center; color:var(--muted); padding:46px 20px; font-size:14px }
 .count-line{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:9px 15px; border-top:1px solid var(--border); font-size:12px; color:var(--muted); flex-wrap:wrap; }
@@ -328,7 +330,7 @@ footer.site{ text-align:center; color:var(--muted); font-size:11.5px; padding:10
     <div class="f-row">
       <div class="f"><label for="n-date">Date of complaint <span class="req">*</span></label><input id="n-date" type="date"></div>
       <div class="f"><label for="n-channel">Received via</label>
-        <select id="n-channel"><option>E-mail (MTP_QUERIES)</option><option>Phone call</option><option>Walk-in</option><option>Letter</option><option>DSE / other broker</option><option>Social media</option><option>Other</option></select></div>
+        <select id="n-channel"><option>E-mail</option><option>Phone call</option><option>Walk-in</option><option>Letter</option><option>DSE / other broker</option><option>Social media</option><option>Other</option></select></div>
     </div>
     <div class="f"><label for="n-name">Client name <span class="req">*</span></label><input id="n-name" autocomplete="off"></div>
     <div class="f-row">
@@ -408,13 +410,13 @@ const DEMO = !CONFIG.API_URL;
 /* Fixed complaint categories (vocabulary of the unit's historical register).
    "Other" opens a specify box — unique complaints keep their own wording. */
 const CATEGORIES = [
-  "Order/purchase issue", "Payment or refund delay", "Account opening/activation",
+  "Order issue", "Payment or refund delay", "Account opening/activation",
   "Account/KYC update", "Portfolio/holdings update", "Share transfer", "Dividends",
   "Statement/report request", "App/USSD technical issue", "General inquiry", "Other",
 ];
-const STATUSES = ["Pending", "Awaiting client", "Open - client followed up", "Resolved"];
-const CHIP = { "Pending":"pending", "Awaiting client":"awaiting", "Open - client followed up":"open", "Resolved":"resolved" };
-const AGE_FLAG_DAYS = 7; // unresolved older than this shows a red age
+const STATUSES = ["Pending", "Awaiting client", "Awaiting DSE resolution", "Resolved"]; // "Open - client followed up" retired 4 Oct 2026 (Kelvin); legacy rows still display
+const CHIP = { "Pending":"pending", "Awaiting client":"awaiting", "Awaiting DSE resolution":"dse", "Open - client followed up":"open", "Resolved":"resolved" };
+const AGE_FLAG_DAYS = 5; // WORKING days unresolved before the age turns red
 
 /* ════════ tiny helpers ════════ */
 const $  = (s, r=document) => r.querySelector(s);
@@ -434,6 +436,17 @@ function fmtDate(iso){ // 2026-09-04 -> 04-Sep-2026
 function daysBetween(fromISO, toISO){
   const a = new Date(fromISO + "T12:00:00Z"), b = new Date(toISO + "T12:00:00Z");
   return Math.max(0, Math.round((b - a) / 86400000));
+}
+function workingDaysBetween(fromISO, toISO){ // Mon-Fri only; the day logged does not count
+  const a = new Date(fromISO + "T12:00:00Z"), b = new Date(toISO + "T12:00:00Z");
+  if(!(a < b)) return 0;
+  let n = 0; const cur = new Date(a);
+  while(cur < b){
+    cur.setUTCDate(cur.getUTCDate() + 1);
+    const d = cur.getUTCDay();
+    if(d !== 0 && d !== 6) n++;
+  }
+  return n;
 }
 function announce(msg){
   let live = $("#sr-live");
@@ -472,7 +485,7 @@ function demoSeed(){
   if(demoRows.length) return;
   const mk = (n, o) => Object.assign({
     ref: "CMC-2026-" + String(n).padStart(4, "0"),
-    clientPhone: "", cdsAccount: "", channel: "E-mail (MTP_QUERIES)",
+    clientPhone: "", cdsAccount: "", channel: "E-mail",
     categoryOther: "", dateResolved: "", resolvedBy: "", resolution: "",
     loggedBy: "Demo Officer", loggedByEmail: "demo.officer@" + STAFF_DOMAIN,
     loggedAt: o.date + " 09:30", updatedBy: "", updatedAt: "", history: [
@@ -480,9 +493,9 @@ function demoSeed(){
   }, o);
   demoRows.push(
     mk(1, { date: "2026-09-28", clientName: "Salehe Riziki Salehe", clientEmail: "salehemkwizu@gmail.com",
-      cdsAccount: "", category: "Order/purchase issue",
+      cdsAccount: "", category: "Order issue",
       summary: "On 4 Sep 2026 client placed and paid for two DSE buy orders — 10,000 NMB @ TZS 2,010 and 7,500 CRDB @ TZS 2,710. NMB order expired, CRDB order stuck at waiting trade. Client demands completion at the 4 Sep prices and rejects a plain refund.",
-      status: "Open - client followed up" }),
+      status: "Awaiting DSE resolution" }),
     mk(2, { date: "2026-09-30", clientName: "Neema Malangalila", clientEmail: "neyalangalila@gmail.com",
       category: "App/USSD technical issue",
       summary: "Client could not sign in to DSE Hisa Kiganjani — OTP never arrives on her Airtel line. Asked for the OTP route to be checked and her login reset.",
@@ -698,17 +711,17 @@ const count = (rows, s) => rows.filter(c => c.status === s).length;
 
 function renderDash(rows){
   const res = count(rows, "Resolved"), pen = count(rows, "Pending"),
-        awa = count(rows, "Awaiting client"), opn = count(rows, "Open - client followed up");
+        awa = count(rows, "Awaiting client"), dse = count(rows, "Awaiting DSE resolution");
   const solved = rows.filter(c => c.status === "Resolved" && c.dateResolved);
   const avg = solved.length
-    ? (solved.reduce((t, c) => t + daysBetween(c.date, c.dateResolved), 0) / solved.length) : null;
+    ? (solved.reduce((t, c) => t + workingDaysBetween(c.date, c.dateResolved), 0) / solved.length) : null;
   $("#dash").innerHTML = [
     ["", "Total complaints", rows.length, "in the current view"],
     ["t-res", "Resolved", res, pct(res, rows.length)],
     ["t-pen", "Pending", pen, pct(pen, rows.length)],
     ["t-awa", "Awaiting client", awa, pct(awa, rows.length)],
-    ["t-opn", "Client followed up", opn, pct(opn, rows.length)],
-    ["t-avg", "Avg days to resolve", avg == null ? "—" : (Math.round(avg * 10) / 10), solved.length + " resolved with dates"],
+    ["t-dse", "Awaiting DSE", dse, pct(dse, rows.length)],
+    ["t-avg", "Avg days to resolve", avg == null ? "—" : (Math.round(avg * 10) / 10), solved.length ? "working days · " + solved.length + " resolved" : "0 resolved with dates"],
   ].map(([cls, k, v, s]) =>
     `<div class="tile ${cls}"><div class="t-k">${k}</div><div class="t-v">${v}</div><div class="t-s">${s}</div></div>`).join("");
 }
@@ -733,7 +746,7 @@ function renderTable(rows){
   const today = todayISO();
   $("#tbody").innerHTML = view.map(c => {
     const open = c.status !== "Resolved";
-    const age = open ? daysBetween(c.date, today) : daysBetween(c.date, c.dateResolved || c.date);
+    const age = open ? workingDaysBetween(c.date, today) : workingDaysBetween(c.date, c.dateResolved || c.date);
     const hot = open && age > AGE_FLAG_DAYS;
     return `<tr data-ref="${esc(c.ref)}">
       <td class="c-sn">${c._sn}</td>
@@ -743,7 +756,7 @@ function renderTable(rows){
       <td class="c-cat">${esc(catLabel(c))}</td>
       <td class="c-sum"><span class="s-t">${esc(c.summary)}</span></td>
       <td><span class="chip ${CHIP[c.status] || "pending"}">${esc(c.status)}</span></td>
-      <td class="c-age${hot ? " age-hot" : ""}">${age}d${hot ? " ⚠" : ""}</td>
+      <td class="c-age${hot ? " age-hot" : ""}">${age}wd${hot ? " ⚠" : ""}</td>
       <td>${esc(c.loggedBy || "")}</td>
     </tr>`;
   }).join("");
@@ -765,7 +778,7 @@ function filterNote(){
 function openNew(){
   $("#n-date").value = todayISO();
   ["n-name","n-email","n-phone","n-cds","n-sum","n-cat-other"].forEach(id => $("#" + id).value = "");
-  $("#n-cat").value = ""; $("#n-channel").value = "E-mail (MTP_QUERIES)";
+  $("#n-cat").value = ""; $("#n-channel").value = "E-mail";
   $("#f-cat-other").hidden = true;
   $("#new-err").style.display = "none";
   $$("#dlg-new .f.invalid").forEach(f => f.classList.remove("invalid"));
@@ -825,7 +838,7 @@ function openDetail(ref){
   ];
   if(c.updatedBy) rows.push(["Last updated", esc(c.updatedBy) + ' <span style="color:var(--muted)">· ' + esc(c.updatedAt || "") + "</span>"]);
   $("#det-kv").innerHTML = rows.map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join("");
-  $("#u-status").value = c.status;
+  $("#u-status").value = STATUSES.includes(c.status) ? c.status : "Pending";
   $("#u-date").value = c.dateResolved || "";
   $("#u-by").value = c.resolvedBy || "";
   $("#u-res").value = c.resolution || "";
@@ -969,7 +982,7 @@ function exportXLSX(){
           fill: even ? { fgColor: { rgb: "F7FAF8" } } : undefined };
         if(C === 1 || C === 6){ if(cell.v instanceof Date){ cell.z = "dd-mmm-yyyy"; } }
         if(C === 9){
-          const col = { "Resolved": "1F7A3C", "Pending": "8A6D00", "Awaiting client": "2B5E8C", "Open - client followed up": "B3261E" }[cell.v];
+          const col = { "Resolved": "1F7A3C", "Pending": "8A6D00", "Awaiting client": "2B5E8C", "Awaiting DSE resolution": "6B4A97", "Open - client followed up": "B3261E" }[cell.v];
           if(col) cell.s.font = { name: "Arial", sz: 9, bold: true, color: { rgb: col } };
         }
       }
@@ -1012,7 +1025,7 @@ function exportPDF(){
       9: { cellWidth: 40 }, 10: { cellWidth: 20 } },
     didParseCell: d => {
       if(d.section === "body" && d.column.index === 10){
-        const col = { "Resolved": [31, 122, 60], "Pending": [138, 109, 0], "Awaiting client": [43, 94, 140], "Open - client followed up": [179, 38, 30] }[d.cell.raw];
+        const col = { "Resolved": [31, 122, 60], "Pending": [138, 109, 0], "Awaiting client": [43, 94, 140], "Awaiting DSE resolution": [107, 74, 151], "Open - client followed up": [179, 38, 30] }[d.cell.raw];
         if(col){ d.cell.styles.textColor = col; d.cell.styles.fontStyle = "bold"; }
       }
     },

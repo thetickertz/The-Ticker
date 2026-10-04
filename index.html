@@ -293,15 +293,15 @@ const DATA = { /* INJECT-DATA */
     {label:"20Y BOND", value:"11.331%", dir:"up"},
     {label:"25Y BOND", value:"11.480%", dir:"dn"},
     {label:"TZS/USD", value:"2,652.38", dir:"up"},
-    {label:"IBCM 7-DAY", value:"6.41%", dir:"up"}
+    {label:"IBCM RATE", value:"6.67%", dir:"up"}
   ],
   sources: [
     {name:"BOT homepage — live indicators", url:"https://www.bot.go.tz/"},
     {name:"MPC statement, July 2026 (No. 244)", url:"https://www.bot.go.tz/Adverts/PressRelease/en/2026070313025546.pdf"},
-    {name:"Monthly Economic Review, August 2026", url:"https://www.bot.go.tz/Publications/Regular/Monthly%20Economic%20Review/en/2026090916364778.pdf"},
+    {name:"Monthly Economic Review, September 2026", url:"https://www.bot.go.tz/Publications/Regular/Monthly%20Economic%20Review/en/2026093021262104.pdf"},
     {name:"Treasury bill auction results", url:"https://www.bot.go.tz/TBills"},
     {name:"Treasury bond auction results", url:"https://www.bot.go.tz/TBonds"},
-    {name:"Issuance calendar, Q1 FY2026/27", url:"https://www.bot.go.tz/Adverts/PressRelease/en/ISSUANCE_CALENDER_English_Version.pdf"},
+    {name:"Issuance calendar, Q2 FY2026/27", url:"https://www.bot.go.tz/webdocs/SiteDocuments/en/2026092309332583.pdf"},
     {name:"MPC meetings calendar 2026/27", url:"https://www.bot.go.tz/webdocs/Other/MPC_Calendar.pdf"},
     {name:"NBS CPI release, August 2026", url:"https://www.nbs.go.tz/uploads/statistics/documents/en-1788862063-CPI%20%20Release_082026_English.pdf"},
     {name:"NBS GDP highlights, Q1 2026", url:"https://www.nbs.go.tz/uploads/statistics/documents/en-1787377904-Highlights%20on%20the%20First%20Quarter%20GDP%202026%20FS.pdf"}
@@ -467,7 +467,19 @@ const DATA = { /* INJECT-DATA */
     {t:"2026-06",v:2623.5},{t:"2026-07",v:2649.7},
     {t:"2026-10-04",v:2652.38,note:"Latest BOT indicative selling rate (buying 2,626.12)"}
   ],
-  calendar: []
+  calendar: [
+    {date:"2026-10-07", what:"Treasury bill auction", m:"35, 91, 182 & 364-day — new issue"},
+    {date:"2026-10-14", what:"Treasury bond auction", m:"25-Year — new issue"},
+    {date:"2026-10-21", what:"Treasury bill auction", m:"35, 91, 182 & 364-day — new issue"},
+    {date:"2026-10-28", what:"Treasury bond auction", m:"20-Year — re-opening"},
+    {date:"2026-11-04", what:"Treasury bond auction", m:"2-Year — re-opening"},
+    {date:"2026-11-11", what:"Treasury bond auction", m:"10-Year — new issue"},
+    {date:"2026-11-18", what:"Treasury bill auction", m:"35, 91, 182 & 364-day — new issue"},
+    {date:"2026-11-25", what:"Treasury bond auction", m:"15-Year — re-opening"},
+    {date:"2026-12-02", what:"Treasury bill auction", m:"35, 91, 182 & 364-day — new issue"},
+    {date:"2026-12-10", what:"Treasury bond auction", m:"5-Year — new issue"},
+    {date:"2026-12-16", what:"Treasury bill auction", m:"35, 91, 182 & 364-day — new issue"}
+  ]
 };
 
 /* ════════════ helpers ════════════ */
@@ -933,16 +945,16 @@ function buildTbills(){
     plain:"Demand cooled sharply to 1.32× the offer — down from 2.39× at the prior auction — as the 35-day and 182-day tenors both fell short of their offer amounts for the first time in months.",
     econ:"Softer demand at the short-to-mid tenors could nudge the government to accept a bit more yield to fully fund near-term needs.",
     mkt:"The broad oversubscription seen in August and early September did not repeat: the 91-day and 364-day tenors held up while the 35-day and 182-day did not."});
-  tile(g2,{label:"Interbank 7-day rate", value:"6.41", unit:"%", delta:"24 Aug", dir:"up",
-    sub:"Overnight: 6.20% (21 Aug) · June avg 5.98%",
-    plain:"What banks charge each other for week-long money — risen since the CBR hike, and sitting inside the ±150 bp corridor around 6.25%.",
-    econ:"Proof the July hike transmitted: bank funding costs followed the CBR up.",
-    mkt:"The corridor anchor confirms T-bill yields near 6.47% are consistent with policy, not an anomaly."});
-  tile(g2,{label:"Overall T-bill WAY", value:"4.74", unit:"%", delta:"−9 bps", dir:"dn",
-    sub:"July 2026 · monthly average, MER",
-    plain:"BOT's monthly average across all four tenors fell to 4.74% in July from 4.83% in June — still dragged below the benchmark by the cheap 35- and 91-day tenors.",
-    econ:"The government's blended short-term funding cost.",
-    mkt:"Compare with 6.47% on the 364-day auction to see how much tenor choice matters."});
+  tile(g2,{label:"Interbank rate (IBCM)", value:"6.67", unit:"%", delta:"+10 bps", dir:"up",
+    sub:"August 2026 · monthly average, MER (July 6.57%)",
+    plain:"What banks charge each other for short-term money — averaged 6.67% in August, up from 6.57% in July, comfortably inside the ±150 bp corridor (4.75–7.75%) around the 6.25% CBR.",
+    econ:"Confirms the July hike is still transmitting through bank funding costs.",
+    mkt:"The corridor anchor shows T-bill yields near 6.29% on the 364-day are consistent with policy, not an anomaly."});
+  tile(g2,{label:"Overall T-bill WAY", value:"4.86", unit:"%", delta:"+12 bps", dir:"up",
+    sub:"August 2026 · monthly average, MER",
+    plain:"BOT's monthly average across all four tenors rose to 4.86% in August from 4.74% in July — still dragged below the benchmark by the cheap 35- and 91-day tenors.",
+    econ:"The government's blended short-term funding cost ticked up.",
+    mkt:"Compare with 6.29% on the 364-day auction to see how much tenor choice matters."});
   chartCard(sec,{title:"T-bill yields by auction",
     note:"Every auction since February 2025. The two short tenors (35 & 91-day) are excluded — several auctions had no successful bids.",
     series:[{name:"364-day", color:"var(--s1)", points:DATA.tbill364},
@@ -953,7 +965,7 @@ function buildTbills(){
 function buildCalendar(){
   const sec=$("#calendar");
   secHead(sec,"Auction Calendar","What's coming to market",
-    'From BOT’s issuance calendar for Q1 of financial year 2026/27 (Jul–Sep). Auctions run on Wednesdays, alternating T-bill weeks and bond weeks. The Oct–Dec calendar is <b>not yet published</b> — it usually lands near the quarter’s start.');
+    'From BOT’s issuance calendar for Q2 of financial year 2026/27 (Oct–Dec 2026), published 15 Sep 2026. Auctions run on Wednesdays, alternating T-bill weeks and bond weeks.');
   const cal=el("div","cal"); sec.append(cal);
   DATA.calendar.forEach(r=>{
     const d=daysUntil(r.date); if(d<-1) return;
@@ -980,25 +992,25 @@ function buildMarket(){
     plain:"It takes 2,652.38 shillings to buy a dollar — about 8% more than a year ago. On this chart, up = weaker shilling.",
     econ:"A weaker shilling makes imports (fuel, fertiliser) pricier — one of the channels behind the inflation climb.",
     mkt:"FX weakness pressures BOT to keep policy tight, which supports higher yields."});
-  tile(g,{label:"FX reserves", value:"6.20", unit:"USD bn", delta:"4.8 months cover", dir:"up",
-    sub:"End-July 2026 · benchmark is 4 months",
-    plain:"Enough foreign currency to pay for 4.8 months of imports — up from 4.4 months in June, comfortably above the national comfort line, supported by gold exports and BOT's domestic gold-buying programme.",
+  tile(g,{label:"FX reserves", value:"5.89", unit:"USD bn", delta:"4.2 months cover", dir:"dn",
+    sub:"End-August 2026 · benchmark is 4 months",
+    plain:"Enough foreign currency to pay for 4.2 months of imports — down from 4.8 months in July, but still above the national comfort line, supported by gold exports and BOT's domestic gold-buying programme.",
     econ:"Reserves are the buffer that lets BOT smooth FX shocks.",
-    mkt:"Comfortable reserves reduce the tail risk foreign investors price into TZS assets."});
-  tile(g,{label:"Private-sector credit", value:"31.2", unit:"% y/y", delta:"from 28.1%", dir:"up",
-    sub:"July 2026 · led by transport & communication, mining and trade",
+    mkt:"Reserves above benchmark still reduce the tail risk foreign investors price into TZS assets, though the cushion has thinned since July."});
+  tile(g,{label:"Private-sector credit", value:"33.0", unit:"% y/y", delta:"from 31.2%", dir:"up",
+    sub:"August 2026 · led by transport & communication (77.2%), mining (75.9%) and trade (47.1%)",
     plain:"Bank lending to businesses and households accelerated further — led by transport & communication, mining and quarrying, and trade.",
     econ:"Credit growth this rapid strengthens the case for keeping policy tight.",
     mkt:"Banks lending heavily to the private sector have less idle cash for T-bills — over time that competes yields upward."});
   const g2=el("div","grid c3"); g2.style.marginTop="14px"; sec.append(g2);
-  tile(g2,{label:"Money supply (M3)", value:"26.9", unit:"% y/y",
-    sub:"July 2026 · up from 25.5% in June",
-    plain:"The broadest measure of money in the economy grew even faster — consistent with the credit boom.",
-    econ:"Rapid money growth is a medium-term inflation watch-item.",
-    mkt:"More money in the system also means more cash chasing auctions — part of the oversubscription story."});
-  tile(g2,{label:"Current account", value:"−2.40", unit:"USD bn", delta:"wider y/y", dir:"dn",
-    sub:"Year to July 2026 · was −1.98bn",
-    plain:"The country buys more from the world than it sells; the deficit widened 21.3%, driven by investment- and energy-related import demand outweighing export growth.",
+  tile(g2,{label:"Money supply (M3)", value:"25.5", unit:"% y/y",
+    sub:"August 2026 · down from 26.9% in July",
+    plain:"The broadest measure of money in the economy moderated — consistent with the less accommodative policy stance, even as private credit keeps accelerating.",
+    econ:"Money growth is still rapid by historic standards, but the deceleration eases the medium-term inflation watch-item.",
+    mkt:"Slightly less cash chasing auctions than in July, though demand remains comfortably oversubscribed."});
+  tile(g2,{label:"Current account", value:"−2.48", unit:"USD bn", delta:"wider y/y", dir:"dn",
+    sub:"Year to August 2026 · was −1.70bn",
+    plain:"The country buys more from the world than it sells; the deficit widened 45.9%, driven by investment- and energy-related import demand outweighing export growth.",
     econ:"A wider deficit financed by investment inflows — manageable, but it leans on the shilling.",
     mkt:"Persistent widening would pressure the currency and, eventually, yields."});
   tile(g2,{label:"Banking health (NPLs)", value:"2.9", unit:"%",
