@@ -1,0 +1,130 @@
+name: DSE daily market report
+
+# OPTIONAL cloud runner. The report is normally produced by scripts/run_daily.sh (macOS/Linux) or
+# scripts/run_daily.ps1 (Windows) on your own computer — see market-report/README.md. This
+# workflow does the same job on GitHub's servers and commits to main, where GitHub Pages serves
+# https://thetickertz.github.io/The-Ticker/market-report/
+#
+# The schedule is switched OFF so the two never compete. To run in the cloud instead of (or as a
+# backup to) your computer, uncomment the `schedule:` block. Each run is idempotent: it asks the
+# DSE for its last trading day and only builds if that day has not been built yet (or was built
+# before the exchange published its own Market Report), so running both is safe, just redundant.
+
+on:
+  # schedule:
+  #   - cron: "40 13 * * 1-5"   # 16:40 EAT – shortly after the close
+  #   - cron: "40 15 * * 1-5"   # 18:40 EAT – the DSE Market Report is usually out by now
+  #   - cron: "40 17 * * 1-5"   # 20:40 EAT – late catch-up
+  #   - cron: "10 5 * * 2-6"    # 08:10 EAT next morning – final catch-up for a late report
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Trading day to build (YYYY-MM-DD) or 'auto' for the last trading day"
+        default: "auto"
+      force:
+        description: "Rebuild even if that day already exists"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: market-report
+  cancel-in-progress: false
+
+env:
+  PLAYWRIGHT_VERSION: "1.63.0"
+  # secrets are not readable in step-level `if:`; expose their presence here instead
+  HAS_SMTP: ${{ secrets.REPORT_SMTP_HOST != '' && secrets.REPORT_EMAIL_TO != '' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: scripts/requirements.txt
+
+      - name: Install Python dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Cache Playwright's Chromium
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ env.PLAYWRIGHT_VERSION }}
+
+      - name: Install Chromium
+        run: |
+          if [ "${{ steps.pw-cache.outputs.cache-hit }}" = "true" ]; then
+            python -m playwright install-deps chromium
+          else
+            python -m playwright install --with-deps chromium
+          fi
+
+      - name: Build the report
+        id: build
+        env:
+          TZ: Africa/Dar_es_Salaam
+          INPUT_DATE: ${{ inputs.date }}
+          INPUT_FORCE: ${{ inputs.force }}
+        run: |
+          ARGS=(--date "${INPUT_DATE:-auto}")
+          if [ "${INPUT_FORCE}" = "true" ]; then ARGS+=(--force); fi
+          python -m scripts.market_report.build "${ARGS[@]}"
+
+      - name: Commit and publish
+        id: publish
+        if: steps.build.outputs.built == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name "the-ticker-bot"
+          git config user.email "the-ticker-bot@users.noreply.github.com"
+          git add -A market-report
+          if git diff --cached --quiet; then
+            echo "nothing changed"; exit 0
+          fi
+          git commit -m "market report ${{ steps.build.outputs.date }} (${{ steps.build.outputs.summary }})"
+          ok=0
+          for i in 1 2 3; do
+            # another run may have pushed in between: rebase onto the latest main and retry
+            if git pull --rebase origin main && git push origin HEAD:main; then ok=1; break; fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((i * 15))
+          done
+          if [ "$ok" != "1" ]; then
+            echo "::error::could not push the report to main after 3 attempts"; exit 1
+          fi
+
+      - name: E-mail the report (only when the SMTP secrets are configured)
+        if: env.HAS_SMTP == 'true' && steps.publish.outcome == 'success' && steps.build.outputs.complete == 'true' && steps.build.outputs.pdf == 'true'
+        env:
+          REPORT_DATE: ${{ steps.build.outputs.date }}
+          REPORT_SMTP_HOST: ${{ secrets.REPORT_SMTP_HOST }}
+          REPORT_SMTP_PORT: ${{ secrets.REPORT_SMTP_PORT }}
+          REPORT_SMTP_USER: ${{ secrets.REPORT_SMTP_USER }}
+          REPORT_SMTP_PASS: ${{ secrets.REPORT_SMTP_PASS }}
+          REPORT_EMAIL_FROM: ${{ secrets.REPORT_EMAIL_FROM }}
+          REPORT_EMAIL_TO: ${{ secrets.REPORT_EMAIL_TO }}
+        run: python -m scripts.market_report.emailer
+
+      - name: Keep the day's dataset and state as a run artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: market-report-${{ steps.build.outputs.date || 'run' }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            market-report/data/state.json
+            market-report/data/${{ steps.build.outputs.date }}.json
+          if-no-files-found: ignore
+          retention-days: 14
