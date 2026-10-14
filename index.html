@@ -277,12 +277,12 @@
    Every value must come from a Bank of Tanzania (or NBS) publication.
    ════════════════════════════════════════════════════════════════════ */
 const DATA = { /* INJECT-DATA */
-  asOf: "2026-10-07",
-  updateLine: "Auto-refreshed from BOT releases · last built 7 Oct 2026",
+  asOf: "2026-10-14",
+  updateLine: "Auto-refreshed from BOT releases · last built 14 Oct 2026",
   tape: [
-    {label:"CBR", value:"6.25%", dir:"up"},
-    {label:"REDISCOUNT", value:"8.75%", dir:"up"},
-    {label:"INFLATION AUG", value:"4.3%", dir:"up"},
+    {label:"CBR", value:"6.25%", dir:"fl"},
+    {label:"REDISCOUNT", value:"8.75%", dir:"fl"},
+    {label:"INFLATION SEP", value:"4.3%", dir:"fl"},
     {label:"GDP 2025", value:"5.9%", dir:"up"},
     {label:"364-DAY BILL", value:"6.284%", dir:"dn"},
     {label:"182-DAY BILL", value:"5.630%", dir:"up"},
@@ -292,18 +292,18 @@ const DATA = { /* INJECT-DATA */
     {label:"15Y BOND", value:"10.791%", dir:"up"},
     {label:"20Y BOND", value:"11.331%", dir:"up"},
     {label:"25Y BOND", value:"11.480%", dir:"dn"},
-    {label:"TZS/USD", value:"2,646.78", dir:"dn"},
+    {label:"TZS/USD", value:"2,645.08", dir:"dn"},
     {label:"IBCM RATE", value:"6.67%", dir:"up"}
   ],
   sources: [
     {name:"BOT homepage — live indicators", url:"https://www.bot.go.tz/"},
-    {name:"MPC statement, July 2026 (No. 244)", url:"https://www.bot.go.tz/Adverts/PressRelease/en/2026070313025546.pdf"},
+    {name:"MPC statement, October 2026 (No. 245)", url:"https://www.bot.go.tz/Adverts/PressRelease/en/2026100815530593.pdf"},
     {name:"Monthly Economic Review, September 2026", url:"https://www.bot.go.tz/Publications/Regular/Monthly%20Economic%20Review/en/2026093021262104.pdf"},
     {name:"Treasury bill auction results", url:"https://www.bot.go.tz/TBills"},
     {name:"Treasury bond auction results", url:"https://www.bot.go.tz/TBonds"},
     {name:"Issuance calendar, Q2 FY2026/27", url:"https://www.bot.go.tz/webdocs/SiteDocuments/en/2026092309332583.pdf"},
     {name:"MPC meetings calendar 2026/27", url:"https://www.bot.go.tz/webdocs/Other/MPC_Calendar.pdf"},
-    {name:"NBS CPI release, August 2026", url:"https://www.nbs.go.tz/uploads/statistics/documents/en-1788862063-CPI%20%20Release_082026_English.pdf"},
+    {name:"NBS CPI release, September 2026", url:"https://www.nbs.go.tz/uploads/statistics/documents/en-1791475662-CPI%20%20Release_092026_English.pdf"},
     {name:"NBS GDP highlights, Q1 2026", url:"https://www.nbs.go.tz/uploads/statistics/documents/en-1787377904-Highlights%20on%20the%20First%20Quarter%20GDP%202026%20FS.pdf"}
   ],
   cbrHistory: [
@@ -317,7 +317,8 @@ const DATA = { /* INJECT-DATA */
     {t:"2025-10-02", v:5.75, note:"Hold at 5.75%"},
     {t:"2026-01-07", v:5.75, note:"Hold at 5.75%"},
     {t:"2026-04-01", v:5.75, note:"Hold at 5.75%; rate corridor narrowed from ±200 to ±150 bps"},
-    {t:"2026-07-02", v:6.25, note:"Hike +50 bps to 6.25% — imported cost pressure (energy, fertiliser, transport)"}
+    {t:"2026-07-02", v:6.25, note:"Hike +50 bps to 6.25% — imported cost pressure (energy, fertiliser, transport)"},
+    {t:"2026-10-07", v:6.25, note:"Hold at 6.25% — MPC No. 245; restrictive stance retained, inflation projected to stay inside 3–5%"}
   ],
   inflation: [
     {t:"2024-07",v:3.0},{t:"2024-08",v:3.1},{t:"2024-09",v:3.1},{t:"2024-10",v:3.0},
@@ -328,7 +329,8 @@ const DATA = { /* INJECT-DATA */
     {t:"2026-03",v:3.2},{t:"2026-04",v:4.0,note:"Step up as fuel and transport costs fed through"},
     {t:"2026-05",v:4.2},{t:"2026-06",v:4.0,note:"Government fuel subsidy in May–June softened the climb"},
     {t:"2026-07",v:4.2,note:"Core 3.9%, food 4.1%"},
-    {t:"2026-08",v:4.3,note:"Latest reading; core 4.1%, food 3.7%"}
+    {t:"2026-08",v:4.3,note:"Core 4.1%, food 3.7%"},
+    {t:"2026-09",v:4.3,note:"Latest reading; flat vs August; core 4.1%, food 3.9%"}
   ],
   gdpAnnual: [
     {t:"2019-12-31",v:6.9,note:"Pre-pandemic pace (older 2015-base series)"},
@@ -467,7 +469,7 @@ const DATA = { /* INJECT-DATA */
     {t:"2025-12",v:2447.5},{t:"2026-01",v:2518.1},{t:"2026-02",v:2542.5},
     {t:"2026-03",v:2577.4},{t:"2026-04",v:2602},{t:"2026-05",v:2609.2},
     {t:"2026-06",v:2623.5},{t:"2026-07",v:2649.7},
-    {t:"2026-10-07",v:2646.78,note:"Latest BOT indicative selling rate (buying 2,620.57)"}
+    {t:"2026-10-14",v:2645.08,note:"Latest BOT indicative selling rate (buying 2,618.89)"}
   ],
   calendar: [
     {date:"2026-10-14", what:"Treasury bond auction", m:"25-Year — new issue"},
@@ -791,37 +793,37 @@ function buildPolicy(){
   secHead(sec,"Policy Desk","The price of money",
     'The Monetary Policy Committee (MPC) meets once a quarter to set the <b>Central Bank Rate (CBR)</b> — the anchor every other interest rate in Tanzania keys off. When it moves, deposit rates, lending rates and government-securities yields eventually follow.');
   const g1=el("div","grid c4"); sec.append(g1);
-  tile(g1,{label:"Central Bank Rate (CBR)", value:"6.25", unit:"%", delta:"+50 bps", dir:"up",
-    sub:"Set 2 Jul 2026 · MPC statement No. 244",
-    plain:"The rate BOT charges banks for short-term money. Raised from 5.75% in July — the first hike since April 2024.",
-    econ:"Borrowing gets more expensive, which cools spending and helps contain the imported-cost pressure (fuel, fertiliser, transport) the MPC flagged.",
-    mkt:"New T-bill and bond auctions tend to clear at <b>higher yields</b>, and existing bond prices soften. The 7-day interbank rate must stay within ±150 bps of this rate.",
+  tile(g1,{label:"Central Bank Rate (CBR)", value:"6.25", unit:"%", delta:"hold", dir:"fl",
+    sub:"Held 8 Oct 2026 · unchanged since the 2 Jul 2026 hike · MPC statement No. 245",
+    plain:"The rate BOT charges banks for short-term money. Held at 6.25% at the October review — unchanged since July's 50 bp hike from 5.75%.",
+    econ:"Holding at a restrictive level keeps cooling spending and containing the imported-cost pressure (fuel, fertiliser, transport) the MPC flagged, even as Middle East and El Niño risks linger.",
+    mkt:"With no fresh policy move, auction yields should stay broadly anchored near current levels until the January decision. The 7-day interbank rate must stay within ±150 bps of this rate.",
     learnQ:"New to this? What the CBR actually is",
     learnA:"Introduced in January 2024, the CBR replaced the old discount-rate framework. BOT steers the 7-day interbank rate into a corridor of ±150 basis points around the CBR by adding or draining bank liquidity. A basis point (bp) is one hundredth of a percentage point — 50 bps = 0.50%."});
-  tile(g1,{label:"Rediscount rate", value:"8.75", unit:"%", delta:"CBR +250 bps", dir:"up",
-    sub:"Q3 2026 · BOT homepage",
+  tile(g1,{label:"Rediscount rate", value:"8.75", unit:"%", delta:"CBR +250 bps", dir:"fl",
+    sub:"Q4 2026 · BOT homepage",
     plain:"What a bank pays to cash in securities at BOT before they mature — deliberately penalty-priced above the CBR.",
     econ:"A safety valve: banks can always raise emergency liquidity, but at a cost that discourages careless funding.",
     mkt:"Acts as a practical ceiling on short-term funding costs — if market rates approached it, banks would borrow from BOT instead."});
-  tile(g1,{label:"Lombard rate", value:"7.75", unit:"%", delta:"CBR +150 bps", dir:"up",
+  tile(g1,{label:"Lombard rate", value:"7.75", unit:"%", delta:"CBR +150 bps", dir:"fl",
     sub:"Confirmed for Jul 2026 · BOT Monthly Economic Review",
     plain:"The rate for overnight borrowing from BOT against collateral, set at the upper band of the ±150 bp corridor around the 6.25% CBR.",
     econ:"Part of the same liquidity toolkit — it caps overnight funding stress in the banking system.",
     mkt:"Moves automatically with the CBR since it is defined as the corridor's top edge."});
-  tile(g1,{label:"Next MPC decision", value:"7 Oct", unit:"2026", delta:"in "+daysUntil("2026-10-07")+" days", dir:"fl",
-    sub:"Statement & media briefing 8 Oct 2026",
-    plain:"The next scheduled CBR decision. After that: 6 Jan 2027 and 31 Mar 2027.",
+  tile(g1,{label:"Next MPC decision", value:"6 Jan", unit:"2027", delta:"in "+daysUntil("2027-01-06")+" days", dir:"fl",
+    sub:"Statement & media briefing 7 Jan 2027",
+    plain:"The next scheduled CBR decision. After that: 31 Mar 2027.",
     econ:"Each decision sets the stance for the following quarter.",
     mkt:"Auction yields often drift toward where the market expects the MPC to go — the weeks before a meeting are when positioning happens."});
   const mc=el("div","card"); mc.style.marginTop="14px";
-  mc.append(el("div","lbl","What the MPC said in July 2026 — in plain words"));
+  mc.append(el("div","lbl","What the MPC said in October 2026 — in plain words"));
   const ul=el("ul"); ul.style.cssText="margin:10px 0 0;padding-left:20px;color:var(--ink2);font-size:13.5px;display:grid;gap:6px";
   [
-    "Rates went up 50 bps to contain inflation pressure from costlier energy, fertiliser and transport (Middle East conflict effects) — not because the economy is weak.",
-    "Growth is fine: mainland GDP grew about 6% in the first half of 2026, and the second half is projected above 6%.",
-    "Inflation rose to 4.2% (May) from 3.2% (March) but stays inside the 3–5% target; a government fuel subsidy in May–June softened the climb.",
-    "Credit is flowing fast — private-sector credit grew about 24% on average — and banks are healthy (bad loans at 2.9% versus the 5% comfort threshold).",
-    "Buffers are solid: FX reserves around USD 6 billion, about 4.3 months of import cover, above the 4-month benchmark."
+    "Rates held steady at 6.25% — the restrictive stance is judged to be working, with inflation projected to stay inside the 3–5% target range.",
+    "GDP got a rebase: the statistics offices moved the base year from 2015 to 2019, lifting Mainland Tanzania's 2025 nominal GDP to about TZS 234.1 trillion (USD 92.3bn). On the new basis, growth was 6% in Q1 2026 and is estimated above 6% in both Q2 and Q3.",
+    "Inflation held at 4.3% in August and September — still inside the 3–5% band — while Zanzibar's inflation eased to 5.6% in August from 6% in July.",
+    "Credit is still flowing fast — private-sector credit averaged about 32.5% growth in the quarter to September — and bad loans stayed low at 2.5% in August, well under the 5% comfort threshold.",
+    "Buffers improved: FX reserves held above USD 6 billion, with import cover rising to 4.3 months in September, above the 4-month benchmark."
   ].forEach(t=>ul.append(el("li","",t)));
   mc.append(ul); sec.append(mc);
   chartCard(sec,{title:"CBR since introduction (Jan 2024)",
@@ -835,18 +837,18 @@ function buildEconomy(){
   secHead(sec,"Economy","Growth and prices",
     'Two numbers drive everything else on this page: <b>inflation</b> (how fast prices rise) and <b>GDP growth</b> (how fast the economy expands). Policy tries to keep the first inside 3–5% without choking the second.');
   const g=el("div","grid c4"); sec.append(g);
-  tile(g,{label:"Headline inflation", value:"4.3", unit:"% y/y", delta:"+0.1 pp", dir:"up",
-    sub:"August 2026 · NBS release, 8 Sep",
-    plain:"A typical basket of goods costs 4.3% more than a year ago — up slightly from 4.2% in July, but still inside the 3–5% target band.",
-    econ:"Moderate and predictable inflation preserves buying power; it is the climb from 3.2% in March that pushed the MPC to hike in July.",
-    mkt:"Inflation is the floor under yields: a 364-day bill at 6.47% pays roughly 2.1% after inflation. If inflation keeps rising, investors demand higher yields to compensate.",
+  tile(g,{label:"Headline inflation", value:"4.3", unit:"% y/y", delta:"flat", dir:"fl",
+    sub:"September 2026 · NBS release, 8 Oct",
+    plain:"A typical basket of goods costs 4.3% more than a year ago — unchanged from August, the second month in a row at that rate, and still inside the 3–5% target band.",
+    econ:"Moderate and predictable inflation preserves buying power; it is the earlier climb from 3.2% in March that pushed the MPC to hike in July, and the plateau since is part of why it held in October.",
+    mkt:"Inflation is the floor under yields: a 364-day bill at 6.28% pays roughly 2.0% after inflation. A steady rate removes one reason for yields to move either way.",
     learnQ:"Headline vs core — what's the difference?",
     learnA:"Headline counts everything in the basket. Core (4.1%) strips out unprocessed food, energy and utilities — the volatile items — so it shows the underlying trend. When core rises too, the pressure is broad, not just a food-price blip."});
-  tile(g,{label:"Core inflation", value:"4.1", unit:"% y/y", delta:"+0.2 pp", dir:"up",
-    sub:"August 2026 · 73.9% of the basket",
-    plain:"Underlying inflation without volatile food and energy — rose further even as food inflation eased to 3.7%, which tells the MPC the pressure is broadening.",
-    econ:"Broadening price pressure is harder to reverse than a food-price spike.",
-    mkt:"Core drives policy more than headline — its climb supports rates staying higher for now."});
+  tile(g,{label:"Core inflation", value:"4.1", unit:"% y/y", delta:"flat", dir:"fl",
+    sub:"September 2026 · 73.9% of the basket",
+    plain:"Underlying inflation without volatile food and energy — held flat at 4.1% for a second month, even as food inflation ticked up to 3.9% from 3.7%, which tells the MPC the broader pressure has stabilised for now.",
+    econ:"A steady core, rather than a broadening one, is part of why the MPC judged the restrictive stance to already be working.",
+    mkt:"Core drives policy more than headline — its plateau supports the case for holding rates rather than hiking further."});
   tile(g,{label:"GDP growth 2025", value:"5.9", unit:"%", delta:"vs 5.6% in 2024", dir:"up",
     sub:"Provisional · BOT projects 6.3% for 2026",
     plain:"The economy grew 5.9% in 2025, led by agriculture, finance, transport, mining and construction.",
@@ -988,16 +990,16 @@ function buildMarket(){
   secHead(sec,"Market Snapshot","The wider picture",
     'The backdrop every yield trades against: the shilling, the country’s FX buffers, and how fast money and credit are growing.');
   const g=el("div","grid c3"); sec.append(g);
-  tile(g,{label:"TZS / USD", value:"2,646.78", unit:"TZS", delta:"weaker y/y", dir:"up",
-    sub:"BOT selling rate · 7 Oct 2026 (buying 2,620.57)",
-    plain:"It takes 2,646.78 shillings to buy a dollar — about 8% more than a year ago. On this chart, up = weaker shilling.",
+  tile(g,{label:"TZS / USD", value:"2,645.08", unit:"TZS", delta:"weaker y/y", dir:"up",
+    sub:"BOT selling rate · 14 Oct 2026 (buying 2,618.89)",
+    plain:"It takes 2,645.08 shillings to buy a dollar — about 8% more than a year ago. On this chart, up = weaker shilling.",
     econ:"A weaker shilling makes imports (fuel, fertiliser) pricier — one of the channels behind the inflation climb.",
     mkt:"FX weakness pressures BOT to keep policy tight, which supports higher yields."});
-  tile(g,{label:"FX reserves", value:"5.89", unit:"USD bn", delta:"4.2 months cover", dir:"dn",
-    sub:"End-August 2026 · benchmark is 4 months",
-    plain:"Enough foreign currency to pay for 4.2 months of imports — down from 4.8 months in July, but still above the national comfort line, supported by gold exports and BOT's domestic gold-buying programme.",
+  tile(g,{label:"FX reserves", value:">6.0", unit:"USD bn", delta:"4.3 months cover", dir:"up",
+    sub:"September 2026 · benchmark is 4 months",
+    plain:"BOT says reserves are now “hovering above USD 6 billion”, enough to pay for 4.3 months of imports — up from 4.2 months in August — supported by gold exports and BOT's domestic gold-buying programme.",
     econ:"Reserves are the buffer that lets BOT smooth FX shocks.",
-    mkt:"Reserves above benchmark still reduce the tail risk foreign investors price into TZS assets, though the cushion has thinned since July."});
+    mkt:"A rebuilding cushion reduces the tail risk foreign investors price into TZS assets."});
   tile(g,{label:"Private-sector credit", value:"33.0", unit:"% y/y", delta:"from 31.2%", dir:"up",
     sub:"August 2026 · led by transport & communication (77.2%), mining (75.9%) and trade (47.1%)",
     plain:"Bank lending to businesses and households accelerated further — led by transport & communication, mining and quarrying, and trade.",
@@ -1014,9 +1016,9 @@ function buildMarket(){
     plain:"The country buys more from the world than it sells; the deficit widened 45.9%, driven by investment- and energy-related import demand outweighing export growth.",
     econ:"A wider deficit financed by investment inflows — manageable, but it leans on the shilling.",
     mkt:"Persistent widening would pressure the currency and, eventually, yields."});
-  tile(g2,{label:"Banking health (NPLs)", value:"2.9", unit:"%",
-    sub:"May 2026 · threshold 5%",
-    plain:"Only 2.9% of bank loans are going bad — comfortably under the 5% comfort threshold.",
+  tile(g2,{label:"Banking health (NPLs)", value:"2.5", unit:"%",
+    sub:"August 2026 · threshold 5% · was 2.9% in May",
+    plain:"Only 2.5% of bank loans are going bad — improved from 2.9% in May and well under the 5% comfort threshold, per the October MPC statement.",
     econ:"Healthy banks keep credit flowing without needing rescue.",
     mkt:"Bank soundness underpins the whole auction machine — banks are the biggest bidders."});
   chartCard(sec,{title:"TZS/USD — end of month",
