@@ -277,8 +277,8 @@
    Every value must come from a Bank of Tanzania (or NBS) publication.
    ════════════════════════════════════════════════════════════════════ */
 const DATA = { /* INJECT-DATA */
-  asOf: "2026-10-21",
-  updateLine: "Auto-refreshed from BOT releases · last built 21 Oct 2026",
+  asOf: "2026-10-28",
+  updateLine: "Auto-refreshed from BOT releases · last built 28 Oct 2026",
   tape: [
     {label:"CBR", value:"6.25%", dir:"fl"},
     {label:"REDISCOUNT", value:"8.75%", dir:"fl"},
@@ -290,9 +290,9 @@ const DATA = { /* INJECT-DATA */
     {label:"5Y BOND", value:"9.528%", dir:"dn"},
     {label:"10Y BOND", value:"10.692%", dir:"dn"},
     {label:"15Y BOND", value:"10.791%", dir:"up"},
-    {label:"20Y BOND", value:"11.331%", dir:"up"},
+    {label:"20Y BOND", value:"10.521%", dir:"dn"},
     {label:"25Y BOND", value:"10.842%", dir:"dn"},
-    {label:"TZS/USD", value:"2,649.35", dir:"up"},
+    {label:"TZS/USD", value:"2,651.76", dir:"up"},
     {label:"IBCM RATE", value:"6.67%", dir:"up"}
   ],
   sources: [
@@ -346,8 +346,8 @@ const DATA = { /* INJECT-DATA */
     {t:5, v:9.5275, note:"Auction No. 700 re-opening, 16 Sep 2026 · 10.25% coupon · bids 2.8× the offer"},
     {t:10, v:10.6924, note:"Auction No. 711 re-opening, 2 Sep 2026 · 11.25% coupon · bids 2.5×"},
     {t:15, v:10.7907, note:"Auction No. 696 3rd sale, 30 Sep 2026 · 12.25% coupon · bids 2.6× the offer — now prices above the 10-year, a normal upward-sloping curve"},
-    {t:20, v:11.3306, note:"Auction No. 710, 8 Jul 2026 · 12.25% coupon · bids 1.9×"},
-    {t:25, v:10.8422, note:"Auction No. 722, 15 Oct 2026 · 12.75% coupon, new issue · bids 7.4× the offer — now prices below the 20-year"}
+    {t:20, v:10.5214, note:"Auction No. 710 re-opening, 28 Oct 2026 · 12.25% coupon · bids 2.9× the offer — fell from 11.33% in July, now below the 10- and 15-year"},
+    {t:25, v:10.8422, note:"Auction No. 722, 15 Oct 2026 · 12.75% coupon, new issue · bids 7.4× the offer — now the highest-yielding tenor on the curve"}
   ],
   tenors: [
     {y:2, name:"2-Year", coupon:"9.50%", way:8.4033, wap:"101.9580", date:"2026-07-29", auc:"No. 712", bid:"3.9×", prev:"8.3624% · 4 Mar 2026", isin:"TZ1996106120",
@@ -398,8 +398,8 @@ const DATA = { /* INJECT-DATA */
       {t:"2026-08-19",v:10.5515,note:"Auction 696 re-opening · 12.25% coupon · bids 4.1×"},
       {t:"2026-09-30",v:10.7907,note:"Auction 696 3rd sale · 12.25% coupon · bids 2.6× the offer"}
      ]},
-    {y:20, name:"20-Year", coupon:"12.25%", way:11.3306, wap:"107.1868", date:"2026-07-08", auc:"No. 710", bid:"1.9×", prev:"10.4297% · 28 May 2026", isin:"TZ1996106062",
-     note:"Auction 710 drew TZS 610bn of bids for TZS 327bn on offer. The jump from 10.43% (May) to 11.33% (July) came alongside a new, higher 12.25% coupon line and the CBR hike week.",
+    {y:20, name:"20-Year", coupon:"12.25%", way:10.5214, wap:"114.2114", date:"2026-10-28", auc:"No. 710 re-opening", bid:"2.9×", prev:"11.3306% · 8 Jul 2026", isin:"TZ1996106062",
+     note:"The 28 October re-opening of the same 12.25% line — Auction 710's second sale — drew TZS 935.5bn of bids for the TZS 326.7bn on offer, 2.9× covered, the heaviest demand this tenor has seen this cycle. The yield fell sharply to 10.52% from 11.33% in July, pulling the 20-year back below both the 10-year (10.69%) and 15-year (10.79%) — a dip rather than a smooth upward slope at the long end.",
      hist:[
       {t:"2024-08-21",v:15.3953,note:"Auction 528 re-opening · 15.49% coupon"},
       {t:"2024-09-25",v:15.4463,note:"Auction 544 re-opening · 15.49% coupon"},
@@ -413,10 +413,11 @@ const DATA = { /* INJECT-DATA */
       {t:"2025-12-17",v:12.0193,note:"Auction 693 · 13% coupon"},
       {t:"2026-03-18",v:10.7148,note:"Auction 698 · 12% coupon"},
       {t:"2026-05-28",v:10.4297,note:"Auction 702 · 11% coupon — the cycle low"},
-      {t:"2026-07-08",v:11.3306,note:"Auction 710 · 12.25% coupon"}
+      {t:"2026-07-08",v:11.3306,note:"Auction 710 · 12.25% coupon"},
+      {t:"2026-10-28",v:10.5214,note:"Auction 710 re-opening · 12.25% coupon · bids 2.9× the offer"}
      ]},
     {y:25, name:"25-Year", coupon:"12.75%", way:10.8422, wap:"116.3067", date:"2026-10-15", auc:"No. 722", bid:"7.4×", prev:"11.4799% · 5 Aug 2026", isin:"TZ1996106179",
-     note:"A brand-new 25-year line (Issue 19, 12.75% coupon) drew the heaviest demand yet seen on this curve: investors bid TZS 2.16 trillion for the TZS 289.93bn on offer — 7.4× covered — plus another TZS 283.1bn chasing the TZS 124.3bn non-competitive window. The yield fell sharply to 10.84% from 11.48% in August, and for the first time this cycle the 25-year now prices below the 20-year (11.33%).",
+     note:"A brand-new 25-year line (Issue 19, 12.75% coupon) drew the heaviest demand yet seen on this curve: investors bid TZS 2.16 trillion for the TZS 289.93bn on offer — 7.4× covered — plus another TZS 283.1bn chasing the TZS 124.3bn non-competitive window. The yield fell sharply to 10.84% from 11.48% in August. The 20-year then re-priced even lower at its 28 October re-opening (10.52%), leaving the 25-year as the single highest-yielding bond on the curve.",
      hist:[
       {t:"2024-09-04",v:15.4188,note:"Auction 568 re-opening · 15.95% coupon"},
       {t:"2024-11-13",v:15.9303,note:"Auction 561 re-opening · 15.95% coupon — the peak"},
@@ -472,10 +473,9 @@ const DATA = { /* INJECT-DATA */
     {t:"2025-12",v:2447.5},{t:"2026-01",v:2518.1},{t:"2026-02",v:2542.5},
     {t:"2026-03",v:2577.4},{t:"2026-04",v:2602},{t:"2026-05",v:2609.2},
     {t:"2026-06",v:2623.5},{t:"2026-07",v:2649.7},
-    {t:"2026-10-21",v:2649.35,note:"Latest BOT indicative selling rate (buying 2,623.12)"}
+    {t:"2026-10-28",v:2651.76,note:"Latest BOT indicative selling rate (buying 2,625.51)"}
   ],
   calendar: [
-    {date:"2026-10-28", what:"Treasury bond auction", m:"20-Year — re-opening"},
     {date:"2026-11-04", what:"Treasury bond auction", m:"2-Year — re-opening"},
     {date:"2026-11-11", what:"Treasury bond auction", m:"10-Year — new issue"},
     {date:"2026-11-18", what:"Treasury bill auction", m:"35, 91, 182 & 364-day — new issue"},
@@ -875,7 +875,7 @@ function buildBonds(){
   secHead(sec,"Bonds & Yields","The government yield curve",
     'Treasury bonds are how the government borrows for the long haul — 2 to 25 years. The <b>weighted average yield (WAY)</b> from each auction is the market’s honest price for lending to the government at that tenor. Yields have fallen a long way from the 15%+ era of late 2024 — a curve-wide rally that repriced everything — with a modest back-up since the July 2026 CBR hike.');
   chartCard(sec,{title:"Yield curve — latest auction yield per tenor",
-    note:"Each dot is that tenor's most recent auction. The 25-year dropped sharply to 10.84% at its 15 October new issue, slipping back below the 20-year (11.33%) — the long end is no longer strictly upward-sloping, even as the 15-year still holds just above the 10-year.",
+    note:"Each dot is that tenor's most recent auction. The 20-year dropped further still, to 10.52% at its 28 October re-opening — now the lowest point among the 10-, 15-, 20- and 25-year bonds — while the 25-year (10.84%) is the highest-yielding tenor on the curve. The long end now has a dip rather than a smooth upward slope.",
     series:[{name:"Latest WAY", color:"var(--s1)", points:DATA.yieldCurve}],
     unit:"%", yFmtDp:2, xKind:"linear", markAll:true, wash:false, xFmt:v=>v+"y", xName:"Tenor", aria:"Government bond yield curve by tenor"});
   const card=el("div","chart-card");
@@ -991,9 +991,9 @@ function buildMarket(){
   secHead(sec,"Market Snapshot","The wider picture",
     'The backdrop every yield trades against: the shilling, the country’s FX buffers, and how fast money and credit are growing.');
   const g=el("div","grid c3"); sec.append(g);
-  tile(g,{label:"TZS / USD", value:"2,649.35", unit:"TZS", delta:"weaker y/y", dir:"up",
-    sub:"BOT selling rate · 21 Oct 2026 (buying 2,623.12)",
-    plain:"It takes 2,649.35 shillings to buy a dollar — about 9% more than a year ago. On this chart, up = weaker shilling.",
+  tile(g,{label:"TZS / USD", value:"2,651.76", unit:"TZS", delta:"weaker y/y", dir:"up",
+    sub:"BOT selling rate · 28 Oct 2026 (buying 2,625.51)",
+    plain:"It takes 2,651.76 shillings to buy a dollar — about 9% more than a year ago. On this chart, up = weaker shilling.",
     econ:"A weaker shilling makes imports (fuel, fertiliser) pricier — one of the channels behind the inflation climb.",
     mkt:"FX weakness pressures BOT to keep policy tight, which supports higher yields."});
   tile(g,{label:"FX reserves", value:">6.0", unit:"USD bn", delta:"4.3 months cover", dir:"up",
