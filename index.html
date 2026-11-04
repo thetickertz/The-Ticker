@@ -277,8 +277,8 @@
    Every value must come from a Bank of Tanzania (or NBS) publication.
    ════════════════════════════════════════════════════════════════════ */
 const DATA = { /* INJECT-DATA */
-  asOf: "2026-10-28",
-  updateLine: "Auto-refreshed from BOT releases · last built 28 Oct 2026",
+  asOf: "2026-11-04",
+  updateLine: "Auto-refreshed from BOT releases · last built 4 Nov 2026",
   tape: [
     {label:"CBR", value:"6.25%", dir:"fl"},
     {label:"REDISCOUNT", value:"8.75%", dir:"fl"},
@@ -286,25 +286,25 @@ const DATA = { /* INJECT-DATA */
     {label:"GDP 2025", value:"5.9%", dir:"up"},
     {label:"364-DAY BILL", value:"6.134%", dir:"dn"},
     {label:"182-DAY BILL", value:"5.571%", dir:"dn"},
-    {label:"2Y BOND", value:"8.403%", dir:"up"},
+    {label:"2Y BOND", value:"8.092%", dir:"dn"},
     {label:"5Y BOND", value:"9.528%", dir:"dn"},
     {label:"10Y BOND", value:"10.692%", dir:"dn"},
     {label:"15Y BOND", value:"10.791%", dir:"up"},
     {label:"20Y BOND", value:"10.521%", dir:"dn"},
     {label:"25Y BOND", value:"10.842%", dir:"dn"},
-    {label:"TZS/USD", value:"2,651.76", dir:"up"},
-    {label:"IBCM RATE", value:"6.67%", dir:"up"}
+    {label:"TZS/USD", value:"2,653.51", dir:"up"},
+    {label:"IBCM RATE", value:"6.67%", dir:"fl"}
   ],
   sources: [
     {name:"BOT homepage — live indicators", url:"https://www.bot.go.tz/"},
     {name:"MPC statement, October 2026 (No. 245)", url:"https://www.bot.go.tz/Adverts/PressRelease/en/2026100815530593.pdf"},
-    {name:"Monthly Economic Review, September 2026", url:"https://www.bot.go.tz/Publications/Regular/Monthly%20Economic%20Review/en/2026093021262104.pdf"},
+    {name:"Monthly Economic Review, October 2026", url:"https://www.bot.go.tz/Publications/Regular/Monthly%20Economic%20Review/en/2026102918183001.pdf"},
     {name:"Treasury bill auction results", url:"https://www.bot.go.tz/TBills"},
     {name:"Treasury bond auction results", url:"https://www.bot.go.tz/TBonds"},
     {name:"Issuance calendar, Q2 FY2026/27", url:"https://www.bot.go.tz/webdocs/SiteDocuments/en/2026092309332583.pdf"},
     {name:"MPC meetings calendar 2026/27", url:"https://www.bot.go.tz/webdocs/Other/MPC_Calendar.pdf"},
     {name:"NBS CPI release, September 2026", url:"https://www.nbs.go.tz/uploads/statistics/documents/en-1791475662-CPI%20%20Release_092026_English.pdf"},
-    {name:"NBS GDP highlights, Q1 2026", url:"https://www.nbs.go.tz/uploads/statistics/documents/en-1787377904-Highlights%20on%20the%20First%20Quarter%20GDP%202026%20FS.pdf"}
+    {name:"NBS GDP highlights, Q2 2026", url:"https://www.nbs.go.tz/uploads/statistics/documents/en-1792576131-Highlights%20on%20the%20Second%20Quarter%20Mainland%20Tanzania%20GDP%202026.pdf"}
   ],
   cbrHistory: [
     {t:"2024-01", v:5.5, note:"CBR introduced at 5.5% — first MPC under the new interest-rate framework"},
@@ -342,7 +342,7 @@ const DATA = { /* INJECT-DATA */
     {t:"2025-12-31",v:5.9,note:"Provisional; just under BOT's 6.0% projection"}
   ],
   yieldCurve: [
-    {t:2, v:8.4033, note:"Auction No. 712, 29 Jul 2026 · 9.50% coupon · bids 3.9× the offer"},
+    {t:2, v:8.0919, note:"Auction No. 712 re-opening, 4 Nov 2026 · 9.50% coupon · bids 2.9× the offer"},
     {t:5, v:9.5275, note:"Auction No. 700 re-opening, 16 Sep 2026 · 10.25% coupon · bids 2.8× the offer"},
     {t:10, v:10.6924, note:"Auction No. 711 re-opening, 2 Sep 2026 · 11.25% coupon · bids 2.5×"},
     {t:15, v:10.7907, note:"Auction No. 696 3rd sale, 30 Sep 2026 · 12.25% coupon · bids 2.6× the offer — now prices above the 10-year, a normal upward-sloping curve"},
@@ -350,15 +350,16 @@ const DATA = { /* INJECT-DATA */
     {t:25, v:10.8422, note:"Auction No. 722, 15 Oct 2026 · 12.75% coupon, new issue · bids 7.4× the offer — now the highest-yielding tenor on the curve"}
   ],
   tenors: [
-    {y:2, name:"2-Year", coupon:"9.50%", way:8.4033, wap:"101.9580", date:"2026-07-29", auc:"No. 712", bid:"3.9×", prev:"8.3624% · 4 Mar 2026", isin:"TZ1996106120",
-     note:"Investors bid TZS 438bn for the TZS 111bn on offer. The 2-year is the closest bond to the CBR's orbit — its yield (8.40%) is roughly the policy rate plus a 2-year risk premium.",
+    {y:2, name:"2-Year", coupon:"9.50%", way:8.0919, wap:"102.2098", date:"2026-11-04", auc:"No. 712 re-opening", bid:"2.9×", prev:"8.4033% · 29 Jul 2026", isin:"TZ1996106120",
+     note:"The 4 November re-opening of the same 9.50% line drew TZS 394.9bn of bids for the TZS 136.9bn on offer — 2.9× covered. The yield eased to 8.09% from 8.40% in July, the lowest level yet for this tenor this cycle. The 2-year is the closest bond to the CBR's orbit — its yield is now only about 185bps above the 6.25% policy rate.",
      hist:[
       {t:"2025-02-05",v:12.551,note:"Auction 668 · 12.5% coupon"},
       {t:"2025-04-16",v:12.0835,note:"Auction 668 re-opening · 12.5% coupon"},
       {t:"2025-07-09",v:12.1695,note:"Auction 672 · 12% coupon"},
       {t:"2025-10-15",v:10.0481,note:"Auction 687 · 10% coupon"},
       {t:"2026-03-04",v:8.3624,note:"Auction 697 · 9.5% coupon"},
-      {t:"2026-07-29",v:8.4033,note:"Auction 712 · 9.5% coupon"}
+      {t:"2026-07-29",v:8.4033,note:"Auction 712 · 9.5% coupon"},
+      {t:"2026-11-04",v:8.0919,note:"Auction 712 re-opening · 9.5% coupon · bids 2.9× the offer"}
      ]},
     {y:5, name:"5-Year", coupon:"10.25%", way:9.5275, wap:"102.6275", date:"2026-09-16", auc:"No. 700 re-opening", bid:"2.8×", prev:"9.5385% · 29 Apr 2026", isin:"TZ1996105965",
      note:"The 5-year returned to market on 16 September after a five-month gap, re-opening the same 10.25% coupon line from April. Investors bid TZS 397bn for the TZS 142.7bn on offer (2.8×), holding the yield essentially flat at 9.53% — a 1bp dip from April.",
@@ -473,7 +474,7 @@ const DATA = { /* INJECT-DATA */
     {t:"2025-12",v:2447.5},{t:"2026-01",v:2518.1},{t:"2026-02",v:2542.5},
     {t:"2026-03",v:2577.4},{t:"2026-04",v:2602},{t:"2026-05",v:2609.2},
     {t:"2026-06",v:2623.5},{t:"2026-07",v:2649.7},
-    {t:"2026-10-28",v:2651.76,note:"Latest BOT indicative selling rate (buying 2,625.51)"}
+    {t:"2026-11-04",v:2653.51,note:"Latest BOT indicative selling rate (buying 2,627.24)"}
   ],
   calendar: [
     {date:"2026-11-04", what:"Treasury bond auction", m:"2-Year — re-opening"},
@@ -855,10 +856,10 @@ function buildEconomy(){
     plain:"The economy grew 5.9% in 2025, led by agriculture, finance, transport, mining and construction.",
     econ:"Faster growth means more jobs, more tax revenue and more demand for credit.",
     mkt:"A growing economy absorbs heavy government borrowing more easily — part of why bond auctions stay oversubscribed."});
-  tile(g,{label:"GDP growth Q1 2026", value:"6.0", unit:"% y/y", delta:"new 2019 base", dir:"up",
-    sub:"NBS · fastest: financial services +20.5%",
-    plain:"First reading on the rebased (2019) series: 6.0% versus 4.3% a year earlier on the same basis. Not directly comparable with the older 2015-base numbers.",
-    econ:"Financial services (+20.5%), health (+13.1%) and education (+11.3%) led the quarter.",
+  tile(g,{label:"GDP growth Q2 2026", value:"6.5", unit:"% y/y", delta:"vs 7.5% a year earlier", dir:"dn",
+    sub:"NBS · fastest: financial & insurance +22.5%",
+    plain:"Second reading on the rebased (2019) series: 6.5% for April–June 2026, down from 7.5% growth a year earlier on the same basis — still a solid pace, just not as fast as last year's quarter.",
+    econ:"Financial & insurance (+22.5%), public administration (+12.8%) and electricity (+11.8%) led the quarter; agriculture contributed most to the headline growth figure.",
     mkt:"A booming financial sector deepens the local investor base bidding at every auction."});
   chartCard(sec,{title:"Headline inflation, monthly",
     note:"Shaded band = the 3–5% national target. Hover for each month's reading.",
@@ -949,16 +950,16 @@ function buildTbills(){
     plain:"Demand rebounded sharply to 1.18× the offer — up from 0.80× at the prior auction — as the 182-day and 364-day tenors both cleared comfortably and the two short tenors improved too, even though neither fully covered its offer.",
     econ:"A broad recovery in participation eases the funding concern flagged by the prior round's shortfall.",
     mkt:"Back above 1× cover for the first time in two auctions."});
-  tile(g2,{label:"Interbank rate (IBCM)", value:"6.67", unit:"%", delta:"+10 bps", dir:"up",
-    sub:"August 2026 · monthly average, MER (July 6.57%)",
-    plain:"What banks charge each other for short-term money — averaged 6.67% in August, up from 6.57% in July, comfortably inside the ±150 bp corridor (4.75–7.75%) around the 6.25% CBR.",
-    econ:"Confirms the July hike is still transmitting through bank funding costs.",
-    mkt:"The corridor anchor shows T-bill yields near 6.29% on the 364-day are consistent with policy, not an anomaly."});
-  tile(g2,{label:"Overall T-bill WAY", value:"4.86", unit:"%", delta:"+12 bps", dir:"up",
-    sub:"August 2026 · monthly average, MER",
-    plain:"BOT's monthly average across all four tenors rose to 4.86% in August from 4.74% in July — still dragged below the benchmark by the cheap 35- and 91-day tenors.",
-    econ:"The government's blended short-term funding cost ticked up.",
-    mkt:"Compare with 6.29% on the 364-day auction to see how much tenor choice matters."});
+  tile(g2,{label:"Interbank rate (IBCM)", value:"6.67", unit:"%", delta:"hold", dir:"fl",
+    sub:"September 2026 · monthly average, MER (August 6.67%)",
+    plain:"What banks charge each other for short-term money — held steady at 6.67% in September, unchanged from August, comfortably inside the ±150 bp corridor (4.75–7.75%) around the 6.25% CBR.",
+    econ:"Confirms the policy stance is transmitting evenly, with no fresh drift in bank funding costs.",
+    mkt:"The corridor anchor shows T-bill yields near 6.13% on the 364-day are consistent with policy, not an anomaly."});
+  tile(g2,{label:"Overall T-bill WAY", value:"4.85", unit:"%", delta:"flat", dir:"fl",
+    sub:"September 2026 · monthly average, MER",
+    plain:"BOT's monthly average across all four tenors held steady at 4.85% in September, little changed from 4.86% in August — still dragged below the benchmark by the cheap 35- and 91-day tenors.",
+    econ:"The government's blended short-term funding cost held steady.",
+    mkt:"Compare with 6.13% on the 364-day auction to see how much tenor choice matters."});
   chartCard(sec,{title:"T-bill yields by auction",
     note:"Every auction since February 2025. The two short tenors (35 & 91-day) are excluded — several auctions had no successful bids.",
     series:[{name:"364-day", color:"var(--s1)", points:DATA.tbill364},
@@ -991,30 +992,30 @@ function buildMarket(){
   secHead(sec,"Market Snapshot","The wider picture",
     'The backdrop every yield trades against: the shilling, the country’s FX buffers, and how fast money and credit are growing.');
   const g=el("div","grid c3"); sec.append(g);
-  tile(g,{label:"TZS / USD", value:"2,651.76", unit:"TZS", delta:"weaker y/y", dir:"up",
-    sub:"BOT selling rate · 28 Oct 2026 (buying 2,625.51)",
-    plain:"It takes 2,651.76 shillings to buy a dollar — about 9% more than a year ago. On this chart, up = weaker shilling.",
+  tile(g,{label:"TZS / USD", value:"2,653.51", unit:"TZS", delta:"weaker y/y", dir:"up",
+    sub:"BOT selling rate · 4 Nov 2026 (buying 2,627.24)",
+    plain:"It takes 2,653.51 shillings to buy a dollar — about 9% more than a year ago. On this chart, up = weaker shilling.",
     econ:"A weaker shilling makes imports (fuel, fertiliser) pricier — one of the channels behind the inflation climb.",
     mkt:"FX weakness pressures BOT to keep policy tight, which supports higher yields."});
-  tile(g,{label:"FX reserves", value:">6.0", unit:"USD bn", delta:"4.3 months cover", dir:"up",
-    sub:"September 2026 · benchmark is 4 months",
-    plain:"BOT says reserves are now “hovering above USD 6 billion”, enough to pay for 4.3 months of imports — up from 4.2 months in August — supported by gold exports and BOT's domestic gold-buying programme.",
+  tile(g,{label:"FX reserves", value:"6.03", unit:"USD bn", delta:"4.3 months cover", dir:"up",
+    sub:"September 2026 · MER · benchmark is 4 months",
+    plain:"Reserves stood at USD 6,031.9 million at end-September, enough to pay for 4.3 months of imports — above the national benchmark — supported by export earnings and BOT's domestic gold-buying programme.",
     econ:"Reserves are the buffer that lets BOT smooth FX shocks.",
     mkt:"A rebuilding cushion reduces the tail risk foreign investors price into TZS assets."});
-  tile(g,{label:"Private-sector credit", value:"33.0", unit:"% y/y", delta:"from 31.2%", dir:"up",
-    sub:"August 2026 · led by transport & communication (77.2%), mining (75.9%) and trade (47.1%)",
-    plain:"Bank lending to businesses and households accelerated further — led by transport & communication, mining and quarrying, and trade.",
+  tile(g,{label:"Private-sector credit", value:"34.2", unit:"% y/y", delta:"from 33.0%", dir:"up",
+    sub:"September 2026 · led by transport & communication (78.3%), trade (52.5%) and agriculture (41.9%)",
+    plain:"Bank lending to businesses and households accelerated further still — led by transport & communication, trade, and agriculture, which overtook mining and quarrying as the third-fastest-growing sector.",
     econ:"Credit growth this rapid strengthens the case for keeping policy tight.",
     mkt:"Banks lending heavily to the private sector have less idle cash for T-bills — over time that competes yields upward."});
   const g2=el("div","grid c3"); g2.style.marginTop="14px"; sec.append(g2);
-  tile(g2,{label:"Money supply (M3)", value:"25.5", unit:"% y/y",
-    sub:"August 2026 · down from 26.9% in July",
-    plain:"The broadest measure of money in the economy moderated — consistent with the less accommodative policy stance, even as private credit keeps accelerating.",
-    econ:"Money growth is still rapid by historic standards, but the deceleration eases the medium-term inflation watch-item.",
-    mkt:"Slightly less cash chasing auctions than in July, though demand remains comfortably oversubscribed."});
-  tile(g2,{label:"Current account", value:"−2.48", unit:"USD bn", delta:"wider y/y", dir:"dn",
-    sub:"Year to August 2026 · was −1.70bn",
-    plain:"The country buys more from the world than it sells; the deficit widened 45.9%, driven by investment- and energy-related import demand outweighing export growth.",
+  tile(g2,{label:"Money supply (M3)", value:"25.9", unit:"% y/y",
+    sub:"September 2026 · up from 25.5% in August",
+    plain:"The broadest measure of money in the economy picked up again after August's moderation, even as private credit keeps accelerating.",
+    econ:"Money growth remains rapid by historic standards, and September's uptick reopens the medium-term inflation watch-item the August dip had briefly eased.",
+    mkt:"Slightly more cash chasing auctions than in August, though demand remains comfortably oversubscribed."});
+  tile(g2,{label:"Current account", value:"−2.40", unit:"USD bn", delta:"wider y/y", dir:"dn",
+    sub:"Year to September 2026 · was −1.88bn",
+    plain:"The country buys more from the world than it sells; the deficit widened 27.6% to USD 2.40bn, as import growth kept outpacing exports — though the pace of widening eased from August's 45.9%, as strong export performance cushioned part of the gap.",
     econ:"A wider deficit financed by investment inflows — manageable, but it leans on the shilling.",
     mkt:"Persistent widening would pressure the currency and, eventually, yields."});
   tile(g2,{label:"Banking health (NPLs)", value:"2.5", unit:"%",
