@@ -270,6 +270,7 @@
     <p class="big" id="bigValue">—</p>
     <p class="msg" id="msg"></p>
     <dl>
+      <dt>Settlement date</dt><dd id="rSettle">—</dd>
       <dt id="rFirstLabel">Clean price</dt><dd id="rFirst">—</dd>
       <dt>Accrued interest</dt><dd id="rAccr">—</dd>
       <dt>Dirty price</dt><dd id="rDirty">—</dd>
@@ -315,7 +316,7 @@
       <div class="field"><label for="accrBasis">Accrued interest day count</label>
         <select id="accrBasis"><option value="act365" selected>Actual/365 (BoT tender convention)</option><option value="actact">Actual/Actual</option></select></div>
       <div class="field"><label for="redemption">Redemption per 100</label><input id="redemption" type="text" inputmode="decimal" value="100"></div>
-      <p class="note">BoT tender documents state Actual/365 for accrued interest, so that is the default. Price ⇄ yield always uses the Actual/Actual street method (same as Excel PRICE / YIELD with basis 1), which is why the sum of discounted cash flows can differ slightly from the dirty price.</p>
+      <p class="note">BoT tender documents state Actual/365 for accrued interest, so that is the default. Price ⇄ yield always uses the Actual/Actual street method (same as Excel PRICE / YIELD with basis 1), which is why the sum of discounted cash flows can differ slightly from the dirty price. Clean price and accrued interest are rounded to four decimal places, as BoT quotes them, before the dirty price and settlement amount are worked out.</p>
       <div class="field" style="margin-top:14px"><label for="backup">Bonds you added or edited (backup)</label>
         <textarea id="backup" placeholder="Nothing added yet. Bonds you add are kept in this browser; copy this text to move them to another phone."></textarea></div>
       <div class="actions">
@@ -476,7 +477,7 @@
   function setPriceType(t){ priceType=t; $('ptClean').setAttribute('aria-pressed',t==='clean'); $('ptDirty').setAttribute('aria-pressed',t==='dirty'); calc(); }
   function show(msg){ $('msg').textContent=msg||''; }
   function blank(){ last=null; $('result').classList.add('off'); $('bigValue').textContent='—';
-    ['rFirst','rAccr','rDirty','rAmount','dPrev','dNext','dDays','dN','dYrs','dCpn','dMac','dMod','dDv01','dDv01F','dUp','dDown'].forEach(id=>$(id).textContent='—');
+    ['rSettle','rFirst','rAccr','rDirty','rAmount','dPrev','dNext','dDays','dN','dYrs','dCpn','dMac','dMod','dDv01','dDv01F','dUp','dDown'].forEach(id=>$(id).textContent='—');
     $('sched').innerHTML=''; $('schedNote').textContent=''; }
 
   function calc(){
@@ -490,7 +491,8 @@
 
     const s=schedule(settle,maturity,f);
     const c=100*rate/f;
-    const accrued = basis==='act365' ? 100*rate*s.A/365 : c*s.A/s.E;
+    const r4=x=>Math.round(x*1e4)/1e4;   // BoT quotes prices and accrued per TZS 100 to 4 decimal places
+    const accrued = r4(basis==='act365' ? 100*rate*s.A/365 : c*s.A/s.E);
 
     let y, clean, entered;
     if(mode==='yield'){
@@ -504,7 +506,7 @@
       if(isNaN(yin)){ blank(); show(''); return; }
       y=yin/100; clean=cleanFromYield(y,s,rate,f,R); entered=`Yield entered ${num(yin,4)}%`;
     }
-    const dirty=clean+accrued;
+    clean=r4(clean); const dirty=r4(clean+accrued);
     const cfs=cashflows(y,s,rate,f,R);
     const dv01=cfs.mod*dirty/10000;
     const up=cleanFromYield(y+0.01,s,rate,f,R), down=cleanFromYield(y-0.01,s,rate,f,R);
@@ -512,6 +514,7 @@
     $('result').classList.remove('off');
     if(mode==='yield'){ $('leadLabel').textContent='Yield to maturity'; $('bigValue').textContent=pct(y); $('rFirstLabel').textContent='Clean price'; $('rFirst').textContent=num(clean,4); }
     else { $('leadLabel').textContent='Clean price per 100'; $('bigValue').textContent=num(clean,4); $('rFirstLabel').textContent='Yield to maturity'; $('rFirst').textContent=pct(y); }
+    $('rSettle').textContent=fmtDate(settle);
     $('rAccr').innerHTML=num(accrued,4)+` <small>${s.A} days · ${basis==='act365'?'Act/365':'Act/Act'}</small>`;
     $('rDirty').textContent=num(dirty,4);
     $('rAmount').textContent = isFinite(face)&&face>0 ? 'TZS '+num(face*dirty/100,2) : 'enter face value';
