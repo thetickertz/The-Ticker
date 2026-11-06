@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="connect-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="connect-src https://script.google.com https://script.googleusercontent.com; base-uri 'none'; form-action 'none'">
 <meta name="robots" content="noindex, nofollow">
 <title>DSE Settlement Engine · CRDB Bank</title>
 <meta name="description" content="Paste a DSE CSD SWIFT MT298/228 settlement instruction and generate verified DBO settlement memos (PDF) and the calculation workbook (Excel).">
@@ -853,6 +853,10 @@ details.log[open] summary .chev { transform: rotate(180deg); }
 .lux-secure .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--ink-300); }
 .lux-card .switch { font-size: 13px; }
 .lux-note { margin: -4px 0 0; font-size: 12.5px; line-height: 1.5; text-align: center; color: var(--ink-500); }
+.lux-card .auth-links { display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap; }
+.lux-card .auth-links .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--ink-300); }
+.fl-input[data-pin] { padding-top: 26px; font-size: 22px; font-weight: 700; letter-spacing: .5em; font-variant-numeric: tabular-nums; }
+.lux-wait { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 8px 0 4px; font-size: 13.5px; color: var(--ink-500); }
 /* floating-label fields */
 .fl { position: relative; }
 .fl-input {
@@ -3120,10 +3124,14 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     return `${first}${last ? '.' + last : ''}@${EMAIL_DOMAIN}`;
   }
 
-  root.DSETeam = { hashSecret, verifySecret, tempPassword, recoveryKey, normEmail, validEmail, passwordProblem, initials, suggestEmail, EMAIL_DOMAIN, _derive: derive, _sha256: sha256 };
+  const randomHex = (n) => toHex(randomBytes(n));
+
+  root.DSETeam = { hashSecret, verifySecret, tempPassword, recoveryKey, normEmail, validEmail, passwordProblem, initials, suggestEmail, EMAIL_DOMAIN,
+    ITERATIONS, randomHex, _derive: derive, _sha256: sha256 };
 })(typeof window !== 'undefined' ? window : globalThis);
 
 </script>
+<script>window.DSE_CLOUD = {"api": "https://script.google.com/macros/s/AKfycbzTf6qs6vGrOnthuMyt44BzRqVRwA1PnZKUhnKQHIswYEITepLclL3tDLFQLAQb3yWhWA/exec", "sender": "capitalmarkets47@gmail.com"};</script>
 <script data-src="app.js">
 /*!
  * CRDB Bank PLC · DSE Settlement Engine — interface
@@ -3137,8 +3145,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   const VERSION = '1.1';
   /** The bank's own data (team, accounts, sample). Only the desk copy has it; the website edition is built without it. */
   const BANK = window.DSE_BANKDATA || null;
-  /** Website edition: carries no bank data. Each browser loads the team file the master admin shares inside the bank. */
+  /** Website edition: carries no bank data. */
   const PUBLIC = !BANK;
+  /** Website with the shared Google Sheet (built with a data-service address): sign-in, team, rules, directory and history live in the sheet.
+   *  Without it, the website edition asks each browser for the team file instead. */
+  const CLOUD_CFG = PUBLIC && window.DSE_CLOUD && window.DSE_CLOUD.api ? window.DSE_CLOUD : null;
+  const CLOUD = !!CLOUD_CFG;
   /** The master admin account cannot be removed, renamed or demoted. */
   const MASTER_ID = 'u-master';
   const MASTER_NAME = BANK ? BANK.masterName : '';
@@ -3328,11 +3340,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     modalClose: null,
   };
 
-  const saveSettings = () => store.set('settings', state.settings) || toast('Could not save settings', 'Browser storage is unavailable or full.', 'err');
-  const saveDirectory = () => store.set('directory', state.directory) || toast('Could not save the directory', 'Browser storage is unavailable or full.', 'err');
-  const saveHistory = () => store.set('history', state.history);
-  const saveTeam = () => store.set('team', state.team) || toast('Could not save the team', 'Browser storage is unavailable or full.', 'err');
-  const saveAuth = () => store.set('auth', state.auth);
+  // With the shared sheet, rules and directory changes go to the sheet; team changes go through the Team page actions.
+  const saveSettings = () => (CLOUD ? cloudPush('settings') : store.set('settings', state.settings) || toast('Could not save settings', 'Browser storage is unavailable or full.', 'err'));
+  const saveDirectory = () => (CLOUD ? cloudPush('directory') : store.set('directory', state.directory) || toast('Could not save the directory', 'Browser storage is unavailable or full.', 'err'));
+  const saveHistory = () => (CLOUD ? null : store.set('history', state.history));
+  const saveTeam = () => (CLOUD ? null : store.set('team', state.team) || toast('Could not save the team', 'Browser storage is unavailable or full.', 'err'));
+  const saveAuth = () => (CLOUD ? null : store.set('auth', state.auth));
   const isAdmin = () => !!(state.user && state.user.isMasterAdmin);
   const activeTeam = () => state.team.filter((u) => u.active);
   const roleLabel = (u) => (u.isMasterAdmin ? 'Master Admin' : u.title || 'Settlement desk');
@@ -4182,7 +4195,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     });
     h.docs = [...new Set([...(h.docs || []), docName])];
     state.history = [h, ...state.history.filter((x) => x !== h)].slice(0, 300);
-    saveHistory();
+    if (CLOUD) cloudSaveHistory(h); else saveHistory();
   }
 
   /* ================================================================ */
@@ -4349,6 +4362,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     if (btn.dataset.confirm !== 'yes') { btn.dataset.confirm = 'yes'; btn.innerHTML = `${icon('alert', 'sm')}Click again to delete`; return; }
     const d = state.directory.find((x) => x.id === id);
     state.directory = state.directory.filter((x) => x.id !== id);
+    if (CLOUD) cloud.deleted.add(id);
     saveDirectory(); closeModal(); renderDirectory(); renderNav(); runEngine();
     toast('Removed from the directory', d ? d.memoName : '');
   }
@@ -4370,7 +4384,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const total = h.reduce((a, x) => a + BigInt(x.totalDr || 0), 0n);
     const comm = h.reduce((a, x) => a + BigInt(x.commission || 0), 0n);
     $('#view-history').innerHTML = `
-      <div class="page-head"><div><h2>History</h2><p>Each batch you generated documents for. It is kept on this PC and protects against settling the same SWIFT twice. Open a batch to regenerate its memos or workbook.</p></div>
+      <div class="page-head"><div><h2>History</h2><p>${CLOUD ? 'Every batch the team generated documents for, kept in the shared sheet.' : 'Each batch you generated documents for. It is kept on this PC.'} It protects against settling the same SWIFT twice. Open a batch to regenerate its memos or workbook.</p></div>
         ${h.length && isAdmin() ? `<button class="btn danger" data-action="clear-history">${icon('trash', 'sm')}Clear history</button>` : ''}</div>
       <div class="stat-row">
         <div class="card stat"><b>${h.length}</b><span>batches generated</span></div>
@@ -4408,8 +4422,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const ctl = state.directory.find((d) => d.type === 'control');
     const logo = s.letterhead && s.letterhead.logo;
     $('#view-settings').innerHTML = `
-      <div class="page-head"><div><h2>Rules & Settings</h2><p>Everything the engine applies: commission rules, the accounts it posts to, and the wording of the DBO memo. Changes save immediately on this PC and re-check the current batch.</p></div>
-        <div class="btn-row"><button class="btn" data-action="export-backup">${icon('download', 'sm')}Backup</button><button class="btn" data-action="import-backup">${icon('upload', 'sm')}Restore</button></div></div>
+      <div class="page-head"><div><h2>Rules & Settings</h2><p>Everything the engine applies: commission rules, the accounts it posts to, and the wording of the DBO memo. ${CLOUD ? 'Only you can change them. Changes save to the shared sheet for the whole team' : 'Changes save immediately on this PC'} and re-check the current batch.</p></div>
+        <div class="btn-row"><button class="btn" data-action="export-backup">${icon('download', 'sm')}Backup</button>${CLOUD ? '' : `<button class="btn" data-action="import-backup">${icon('upload', 'sm')}Restore</button>`}</div></div>
       <div class="settings-grid">
         <section class="card set-card"><div class="card-head"><div class="card-title-ic"><div class="ic-badge">${icon('coins')}</div><div><h3>Commission rules</h3><p>Charged on each debited participant: obligation × rate, rounded to the cent, then held between the minimum and the maximum. Credits are paid at the SWIFT obligation.</p></div></div></div>
           <div class="card-body"><div class="rule-cards">
@@ -4453,14 +4467,14 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                 <button class="btn sm" data-action="upload-logo">${icon('upload', 'sm')}Upload official logo</button>${logo ? `<button class="btn sm ghost" data-action="reset-logo">Use built-in</button>` : ''}</div></div>
           </div></section>
 
-        <section class="card set-card"><div class="card-head"><div class="card-title-ic"><div class="ic-badge amber">${icon('alert')}</div><div><h3>Data on this PC</h3><p>Backups include the rules, the Broker Directory, the team and history. To give colleagues the same setup, use Share engine with team on the Team page.</p></div></div></div>
+        <section class="card set-card"><div class="card-head"><div class="card-title-ic"><div class="ic-badge amber">${icon('alert')}</div><div><h3>${CLOUD ? 'Shared data' : 'Data on this PC'}</h3><p>${CLOUD ? 'The rules, the Broker Directory, the team and the history are kept in the Capital Markets Google Sheet. Download a copy any time.' : 'Backups include the rules, the Broker Directory, the team and history. To give colleagues the same setup, use Share engine with team on the Team page.'}</p></div></div></div>
           <div class="card-body"><div class="btn-row">
             <button class="btn" data-action="export-backup">${icon('download', 'sm')}Download backup (.json)</button>
-            <button class="btn" data-action="import-backup">${icon('upload', 'sm')}Restore from backup</button>
+            ${CLOUD ? '' : `<button class="btn" data-action="import-backup">${icon('upload', 'sm')}Restore from backup</button>`}
             <span class="spacer" style="flex:1"></span>
             <button class="btn danger" data-action="reset-settings">Reset settings</button>
-            <button class="btn danger" data-action="reset-directory">Reset directory to seed</button>
-          </div><div class="hint" style="margin-top:10px;font-size:12px;color:var(--ink-500)">DSE Settlement Engine ${VERSION} · master admin ${esc(masterName())} · data is stored in this browser's local storage for this file.</div></div></section>
+            ${CLOUD ? '' : '<button class="btn danger" data-action="reset-directory">Reset directory to seed</button>'}
+          </div><div class="hint" style="margin-top:10px;font-size:12px;color:var(--ink-500)">DSE Settlement Engine ${VERSION} · master admin ${esc(masterName())} · ${CLOUD ? 'data is kept in the shared Google Sheet.' : "data is stored in this browser's local storage for this file."}</div></div></section>
       </div>`;
   }
 
@@ -4597,12 +4611,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
               <li>Each F20 is remembered, and a repeat is flagged.</li>
               <li>Unknown participants are learned, never guessed.</li>
               <li>Amounts use exact integer cents. No rounding drift.</li>
-              <li>Nothing is sent over the network. The file works offline.</li>
+              <li>${CLOUD ? 'SWIFT checks and documents are worked out in this browser. Only the team records go to the shared sheet.' : 'Nothing is sent over the network. The file works offline.'}</li>
             </ul></div></section>
           <section class="card"><div class="card-body" style="padding-top:20px"><h3>Shortcuts</h3>
             <p><span class="kbd">Ctrl</span> + <span class="kbd">V</span> in the editor — paste<br><span class="kbd">Ctrl</span> + <span class="kbd">Enter</span> — re-check now<br><span class="kbd">Esc</span> — close a dialog</p></div></section>
           <section class="card"><div class="card-body" style="padding-top:20px"><h3>Team &amp; sign-in</h3>
-            <p>Everyone signs in with their CRDB email. ${esc(masterName())}, the master admin, adds staff on the <b>Team</b> page, sets their roles and gives each a temporary password. Then <b>Share engine with team</b> creates one file for the shared drive. It carries the team, the rules and the Broker Directory.</p></div></section>
+            <p>${CLOUD ? `Everyone signs in with their CRDB email. ${esc(masterName())}, the master admin, adds staff on the <b>Team</b> page and sets their roles. Each person then chooses <b>Create your password</b> and gets a one-time PIN by email.` : `Everyone signs in with their CRDB email. ${esc(masterName())}, the master admin, adds staff on the <b>Team</b> page, sets their roles and gives each a temporary password. Then <b>Share engine with team</b> creates one file for the shared drive. It carries the team, the rules and the Broker Directory.`}</p></div></section>
         </div>
       </div>`;
   }
@@ -4645,6 +4659,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
   function signOut(quiet) {
     const was = state.user;
+    if (CLOUD) { if (cloudToken()) api('logout').catch(() => {}); setCloudToken(''); }
     state.user = null; clearSession(); closeModal();
     $('#app').hidden = true;
     renderLogin({ email: was ? was.email : '' });
@@ -4717,7 +4732,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       <form id="login-form" class="auth-form" novalidate>
         ${flField('li-email', 'CRDB email', 'email', 'username', email)}
         ${flPw('li-pw', 'Password', 'current-password')}
-        <div class="lux-row">${PUBLIC ? '<button type="button" class="linkish" data-action="open-team-file">Open a newer team file</button>' : '<span></span>'}<button type="button" class="linkish" data-action="forgot">Forgot password?</button></div>
+        <div class="lux-row">${CLOUD ? '<button type="button" class="linkish" data-action="cloud-create">First time? Create your password</button>'
+          : PUBLIC ? '<button type="button" class="linkish" data-action="open-team-file">Open a newer team file</button>' : '<span></span>'}<button type="button" class="linkish" data-action="forgot">Forgot password?</button></div>
         ${authErrorBox()}
         <button class="lux-btn" type="submit"><span>Sign in</span>${icon('arrowRight', 'sm')}</button>
       </form>`);
@@ -4725,6 +4741,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   }
 
   async function doLogin() {
+    if (CLOUD) { doLoginCloud(); return; }
     const form = $('#login-form');
     if (Date.now() < state.lockedUntil) { showAuthError(`Too many attempts. Try again in ${Math.ceil((state.lockedUntil - Date.now()) / 1000)} seconds.`); return; }
     const email = T.normEmail($('#li-email').value), pw = $('#li-pw').value;
@@ -4845,7 +4862,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   /* ---- Team page (master admin) ---- */
   function memberStatus(u) {
     if (!u.active) return { cls: '', text: 'Inactive. Cannot sign in or sign memos.' };
-    if (!u.pw) return { cls: 'warn', text: 'No password yet. Set a temporary password so they can sign in.' };
+    if (!u.pw) return { cls: 'warn', text: CLOUD ? 'No password yet. They choose Create your password on the website and get a PIN by email.' : 'No password yet. Set a temporary password so they can sign in.' };
     if (u.mustChange) return { cls: 'info', text: 'Temporary password set. They choose their own at first sign-in.' };
     return { cls: 'ok', text: u.lastLoginAt ? `Last signed in ${fmtWhen(u.lastLoginAt)}` : 'Ready to sign in.' };
   }
@@ -4857,8 +4874,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       const roles = [u.isMasterAdmin ? `<span class="chip brand">${icon('shield')}Master admin</span>` : '', u.canInitiate ? '<span class="chip green">Initiator</span>' : '',
         u.canAuthorize ? '<span class="chip blue">Authorizer</span>' : '', u.active ? '' : '<span class="chip">Inactive</span>'].join('');
       const acts = u.isMasterAdmin
-        ? (me && me.id === u.id ? `<button class="btn sm" data-action="my-password">${icon('key', 'sm')}Change my password</button><button class="btn sm ghost" data-action="new-recovery">${icon('shield', 'sm')}New recovery key</button>` : '')
-        : `<button class="btn sm" data-action="team-temp" data-id="${esc(u.id)}" ${u.active ? '' : 'disabled'}>${icon('key', 'sm')}${u.pw ? 'Reset password' : 'Set temporary password'}</button>
+        ? (me && me.id === u.id ? `<button class="btn sm" data-action="my-password">${icon('key', 'sm')}Change my password</button>${CLOUD ? '' : `<button class="btn sm ghost" data-action="new-recovery">${icon('shield', 'sm')}New recovery key</button>`}` : '')
+        : `${CLOUD && !u.pw ? '' : `<button class="btn sm" data-action="team-temp" data-id="${esc(u.id)}" ${u.active ? '' : 'disabled'}>${icon('key', 'sm')}${u.pw ? 'Reset password' : 'Set temporary password'}</button>`}
            <button class="btn sm ghost" data-action="team-toggle" data-id="${esc(u.id)}">${u.active ? 'Deactivate' : 'Reactivate'}</button>`;
       return `<div class="card member ${u.active ? '' : 'inactive'}">
         <div class="member-top">${avatar(u, 'lg')}<div class="member-id"><b>${esc(u.name)}</b><span>${esc(u.title || 'No designation set')}</span></div>
@@ -4872,7 +4889,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const n = (f) => team.filter(f).length;
     $('#view-team').innerHTML = `
       <div class="page-head"><div><h2>Team</h2><p>Who can sign in, prepare and authorize settlement memos. Only you, as master admin, can add staff, change roles or reset passwords.</p></div>
-        <div class="btn-row"><button class="btn" data-action="team-publish">${icon('share', 'sm')}Share engine with team</button><button class="btn primary" data-action="team-add">${icon('plus', 'sm')}Add staff member</button></div></div>
+        <div class="btn-row">${CLOUD ? '' : `<button class="btn" data-action="team-publish">${icon('share', 'sm')}Share engine with team</button>`}<button class="btn primary" data-action="team-add">${icon('plus', 'sm')}Add staff member</button></div></div>
       <div class="stat-row">
         <div class="card stat"><b>${n((u) => u.active)}</b><span>active members</span></div>
         <div class="card stat"><b>${n((u) => u.active && u.canInitiate)}</b><span>can initiate (prepare)</span></div>
@@ -4880,8 +4897,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         <div class="card stat"><b>${n((u) => u.active && !u.pw)}</b><span>waiting for a password</span></div>
       </div>
       <div class="team-grid">${cards}</div>
-      <div class="card share-note"><div class="card-title-ic"><div class="ic-badge blue">${icon('share')}</div><div><h3>Using the engine on other PCs</h3>
-        <p>Each colleague opens their own copy of the engine file. After you add someone, change a role or set a temporary password, click <b>Share engine with team</b> and put the new file on the shared drive. The team, the rules and the Broker Directory travel inside the file. Passwords are stored only as secure hashes, never as plain text.</p></div></div></div>`;
+      ${CLOUD ? `<div class="card share-note"><div class="card-title-ic"><div class="ic-badge blue">${icon('mail')}</div><div><h3>How colleagues sign in</h3>
+        <p>When you add someone, they get an email with the website link. They choose <b>Create your password</b>, enter their CRDB email and receive a one-time PIN${CLOUD_CFG.sender ? ` from ${esc(CLOUD_CFG.sender)}` : ''}. <b>Reset password</b> clears a password and emails them to create a new one. Only you see this page; the shared sheet refuses team, rules and directory changes from anyone else.</p></div></div></div>`
+      : `<div class="card share-note"><div class="card-title-ic"><div class="ic-badge blue">${icon('share')}</div><div><h3>Using the engine on other PCs</h3>
+        <p>Each colleague opens their own copy of the engine file. After you add someone, change a role or set a temporary password, click <b>Share engine with team</b> and put the new file on the shared drive. The team, the rules and the Broker Directory travel inside the file. Passwords are stored only as secure hashes, never as plain text.</p></div></div></div>`}`;
   }
 
   function openMemberEdit(id) {
@@ -4890,7 +4909,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const master = !!(u && u.isMasterAdmin);
     openModal({
       title: u ? `Edit — ${u.name}` : 'Add staff member',
-      sub: master ? 'The master admin cannot be renamed, demoted or deactivated.' : u ? `Added ${fmtWhen(u.createdAt)}` : 'They sign in with this email. You set a temporary password next.',
+      sub: master ? 'The master admin cannot be renamed, demoted or deactivated.' : u ? `Added ${fmtWhen(u.createdAt)}` : CLOUD ? 'They sign in with this email. We email them the link to create a password.' : 'They sign in with this email. You set a temporary password next.',
       body: `
         <div class="field"><label for="m-name">Full name</label><input class="input" id="m-name" value="${esc(v.name)}" ${master ? 'readonly' : ''} placeholder="e.g. Neema Mushi"></div>
         <div class="field"><label for="m-email">CRDB email</label><input class="input" id="m-email" type="email" value="${esc(v.email)}" placeholder="name.surname@${T.EMAIL_DOMAIN}" data-auto="${u ? 'off' : 'on'}">
@@ -4905,6 +4924,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   }
 
   function saveMember(id) {
+    if (CLOUD) { cloudSaveMember(id); return; }
     const name = $('#m-name').value.replace(/\s+/g, ' ').trim();
     const email = T.normEmail($('#m-email').value);
     const title = $('#m-desig').value.replace(/\s+/g, ' ').trim();
@@ -4943,7 +4963,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     });
   }
 
-  function toggleMember(id) {
+  function toggleMember(id, el) {
+    if (CLOUD) { cloudToggleMember(id, el); return; }
     const u = state.team.find((x) => x.id === id);
     if (!u || u.isMasterAdmin) return;
     u.active = !u.active; u.profileAt = nowIso(); saveTeam();
@@ -4961,6 +4982,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     });
   }
   async function saveMyPassword() {
+    if (CLOUD) { cloudSaveMyPassword(); return; }
     const u = state.user; if (!u) return;
     const cur = $('#mp-current').value, a = $('#mp-new').value, b = $('#mp-confirm').value;
     if (!(await T.verifySecret(cur, u.pw))) { $('#mp-current').classList.add('invalid'); toast('Current password is not correct', '', 'err'); return; }
@@ -5072,6 +5094,249 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   }
 
   /* ================================================================ */
+  /* Shared data: the website and the Capital Markets Google Sheet    */
+  /* ================================================================ */
+  // Sign-in, the team, the rules, the Broker Directory and the batch history live in the sheet, reached
+  // through its Apps Script web app. Passwords are stretched here (PBKDF2) before anything is sent, PINs
+  // are emailed by the sheet's account, and the sheet checks the master admin for every protected change.
+  const TKEY = KEY + 'cloud-token';
+  const cloud = { lastSync: 0, deleted: new Set(), timers: {}, inflight: {} };
+  function cloudToken() { try { return sessionStorage.getItem(TKEY) || ''; } catch (e) { return ''; } }
+  function setCloudToken(t) { try { if (t) sessionStorage.setItem(TKEY, t); else sessionStorage.removeItem(TKEY); } catch (e) { /* ignore */ } }
+  const stretch = (pw, salt) => T._derive(String(pw), salt, T.ITERATIONS);
+
+  async function api(action, data) {
+    let res, out = null;
+    try {
+      res = await fetch(CLOUD_CFG.api, { method: 'POST', redirect: 'follow', cache: 'no-store', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(Object.assign({ action, token: cloudToken() }, data || {})) });
+    } catch (e) { throw new Error('Cannot reach the shared data service. Check the internet connection and try again.'); }
+    try { out = await res.json(); } catch (e) { /* not JSON */ }
+    if (!out) throw new Error('The shared data service did not answer properly. Try again in a moment.');
+    if (!out.ok) {
+      const err = new Error(out.error || 'The request failed.'); err.code = out.code || '';
+      if (err.code === 'auth' && state.user) setTimeout(sessionEnded, 0);
+      throw err;
+    }
+    cloud.lastSync = Date.now();
+    return out;
+  }
+  function sessionEnded() {
+    if (!state.user) return;
+    const email = state.user.email;
+    signOut(true);
+    renderLogin({ email, note: 'Your session ended. Sign in again.' });
+  }
+
+  const cloudMember = (u) => Object.assign({}, u, { pw: u.hasPassword ? { cloud: true } : null, mustChange: false });
+  /** Load what the sheet sent into the engine; returns the signed-in person. */
+  function applyBundle(b) {
+    if (b.token) setCloudToken(b.token);
+    state.team = (b.team || []).map(cloudMember);
+    state.settings = migrateSettings(b.settings || {});
+    state.directory = Array.isArray(b.directory) ? b.directory : [];
+    state.history = Array.isArray(b.history) ? b.history : [];
+    const me = b.user ? state.team.find((u) => u.id === b.user.id) : null;
+    if (me) me.salt = b.user.salt || '';
+    return me;
+  }
+  function refreshTeam(team) {
+    const salt = state.user && state.user.salt;
+    state.team = (team || []).map(cloudMember);
+    if (state.user) { const me = state.team.find((u) => u.id === state.user.id); if (me) { me.salt = salt; state.user = me; } }
+    defaultSigners(); store.set('signers', state.signers);
+    if (state.view === 'team') renderTeam();
+    renderNav(); renderUser(); if (state.result) renderResults();
+  }
+
+  async function cloudBoot() {
+    // The website keeps no team data in the browser; clear anything an older copy left behind.
+    ['team', 'auth', 'directory', 'settings', 'history', 'package-applied'].forEach((k) => store.del(k));
+    state.team = []; state.directory = []; state.history = [];
+    if (!cloudToken()) { renderLogin(); return; }
+    authShell(`${luxHead('shield', 'Welcome back', 'Opening your session…')}<div class="lux-wait">${icon('refresh', 'sm spin')}<span>Loading the team's data</span></div>`);
+    try { enterApp(applyBundle(await api('session'))); }
+    catch (e) { setCloudToken(''); renderLogin(e.code === 'auth' ? {} : { note: e.message }); }
+  }
+  /** Pick up colleagues' changes (new batches, learned participants, team changes) when the page is used again. */
+  async function cloudRefresh() {
+    if (!state.user || Object.values(cloud.timers).some(Boolean) || Object.values(cloud.inflight).some(Boolean)) return;
+    try {
+      const b = await api('session');
+      const salt = state.user.salt, me = applyBundle(b);
+      if (!me) { sessionEnded(); return; }
+      me.salt = salt || me.salt; state.user = me;
+      defaultSigners(); renderNav(); renderUser(); runEngine(); show(state.view);
+    } catch (e) { /* the next action reports problems */ }
+  }
+
+  async function cloudLogin(email, pw) {
+    const key = 'salt:' + email;
+    let salt = store.get(key, '');
+    let out = await api('login', { email, salt, proof: salt ? await stretch(pw, salt) : '' });
+    if (out.retry) {
+      salt = out.salt; store.set(key, salt);
+      out = await api('login', { email, salt, proof: await stretch(pw, salt) });
+    }
+    if (out.retry) throw new Error('Sign-in could not be completed. Try again.');
+    return out;
+  }
+  async function doLoginCloud() {
+    const form = $('#login-form');
+    const email = T.normEmail($('#li-email').value), pw = $('#li-pw').value;
+    if (!T.validEmail(email)) { showAuthError('Enter your CRDB email address.'); return; }
+    if (!pw) { showAuthError('Enter your password.'); return; }
+    busy(form, true);
+    try {
+      const u = applyBundle(await cloudLogin(email, pw));
+      store.set('last-email', email);
+      enterApp(u);
+      toast(`Welcome, ${u.name.split(/\s+/)[0]}`, u.isMasterAdmin ? 'Signed in as master admin.' : 'Signed in.');
+    } catch (e) {
+      busy(form, false);
+      showAuthError(/not correct/i.test(e.message) ? `${e.message} First time here? Choose “Create your password”.` : e.message);
+    }
+  }
+
+  /* ---- first password / forgotten password: email PIN → new password ---- */
+  const fromSender = () => (CLOUD_CFG.sender ? ` from ${esc(CLOUD_CFG.sender)}` : '');
+  function renderPinStart(mode, email) {
+    authShell(`
+      ${luxHead('mail', mode === 'reset' ? 'Reset your password' : 'Create your password', `Enter your CRDB email. We will email you a one-time PIN${fromSender()}.`)}
+      <form id="pin-start-form" class="auth-form" novalidate>
+        ${flField('ps-email', 'CRDB email', 'email', 'username', email || store.get('last-email', ''))}
+        ${authErrorBox()}
+        <button class="lux-btn" type="submit"><span>Email me a PIN</span>${icon('arrowRight', 'sm')}</button>
+      </form>
+      <div class="auth-links"><button type="button" class="linkish" data-action="back-login">Back to sign in</button></div>`);
+  }
+  async function doPinStart() {
+    const form = $('#pin-start-form'), email = T.normEmail($('#ps-email').value);
+    if (!T.validEmail(email)) { showAuthError('Enter your CRDB email address.'); return; }
+    busy(form, true, 'Sending…');
+    try { await api('pinRequest', { email }); store.set('last-email', email); renderPinCode(email); }
+    catch (e) { busy(form, false); showAuthError(e.message); }
+  }
+  function renderPinCode(email) {
+    authShell(`
+      ${luxHead('key', 'Check your email', `If ${esc(email)} is on the team, a 6-digit PIN is on its way${fromSender()}. It works for 10 minutes.`)}
+      <form id="pin-code-form" class="auth-form" novalidate data-email="${esc(email)}">
+        ${flField('pc-pin', 'One-time PIN', 'text', 'one-time-code', '', 'inputmode="numeric" maxlength="6" data-pin')}
+        ${authErrorBox()}
+        <button class="lux-btn" type="submit"><span>Continue</span>${icon('arrowRight', 'sm')}</button>
+      </form>
+      <div class="auth-links"><button type="button" class="linkish" data-action="pin-resend" data-email="${esc(email)}">Send a new PIN</button><i class="dot"></i><button type="button" class="linkish" data-action="back-login">Back to sign in</button></div>
+      <p class="lux-note">No email after a minute? Check the spam folder, or ask the master admin to check your address on the Team page.</p>`);
+  }
+  async function doPinCode() {
+    const form = $('#pin-code-form'), email = form.dataset.email, pin = $('#pc-pin').value.replace(/\D/g, '');
+    if (pin.length !== 6) { showAuthError('Enter the 6-digit PIN from the email.'); return; }
+    busy(form, true);
+    try { const out = await api('pinVerify', { email, pin }); renderNewPassword(email, out.ticket, out.name); }
+    catch (e) { busy(form, false); showAuthError(e.message); }
+  }
+  function renderNewPassword(email, ticket, name) {
+    authShell(`
+      ${luxHead('shield', 'Choose your password', `${name ? `Hi ${esc(String(name).split(/\s+/)[0])}, c` : 'C'}hoose the password you will sign in with.`)}
+      <form id="new-pw-form" class="auth-form" novalidate data-email="${esc(email)}" data-ticket="${esc(ticket)}">
+        ${flPw('np-new', 'New password', 'new-password', 'At least 8 characters, with letters and numbers.')}
+        ${flPw('np-confirm', 'Confirm new password', 'new-password')}
+        ${authErrorBox()}
+        <button class="lux-btn" type="submit"><span>Save and sign in</span>${icon('arrowRight', 'sm')}</button>
+      </form>`);
+  }
+  async function doNewPassword() {
+    const form = $('#new-pw-form'), a = $('#np-new').value, b = $('#np-confirm').value, email = form.dataset.email;
+    const prob = T.passwordProblem(a); if (prob) { showAuthError(prob); return; }
+    if (a !== b) { showAuthError('The two passwords do not match.'); return; }
+    busy(form, true, 'Securing…');
+    try {
+      const salt = T.randomHex(16);
+      const u = applyBundle(await api('setPassword', { email, ticket: form.dataset.ticket, salt, proof: await stretch(a, salt) }));
+      store.set('salt:' + email, salt); store.set('last-email', email);
+      enterApp(u);
+      toast('Password saved', `Welcome, ${u.name.split(/\s+/)[0]}. Use it the next time you sign in.`);
+    } catch (e) { busy(form, false); showAuthError(e.message); }
+  }
+
+  /* ---- saving to the sheet ---- */
+  function cloudPush(kind) {
+    if (!state.user) return;
+    clearTimeout(cloud.timers[kind]);
+    cloud.timers[kind] = setTimeout(() => { cloud.timers[kind] = null; cloudPushNow(kind); }, 500);
+  }
+  async function cloudPushNow(kind) {
+    if (cloud.inflight[kind]) { cloudPush(kind); return; }   // one request of each kind at a time
+    cloud.inflight[kind] = true;
+    try {
+      if (kind === 'settings') {
+        if (isAdmin()) await api('saveSettings', { settings: state.settings });
+      } else if (kind === 'directory') {
+        const deleted = [...cloud.deleted];
+        const out = await api('saveDirectory', { entries: state.directory, deleted });
+        deleted.forEach((id) => cloud.deleted.delete(id));
+        // Colleagues may only add learned participants: take the sheet's version so the engine matches it.
+        if (!isAdmin() && Array.isArray(out.directory)) { state.directory = out.directory; runEngine(); renderNav(); }
+      }
+    } catch (e) {
+      if (e.code !== 'auth') toast('Not saved to the shared sheet', e.message, 'err', 8000);
+    } finally { cloud.inflight[kind] = false; }
+  }
+  async function cloudSaveHistory(h) {
+    try { const out = await api('saveHistory', { record: h }); if (out.record) Object.assign(h, out.record); }
+    catch (e) { if (e.code !== 'auth') toast('Batch not recorded in the shared history', e.message, 'err', 8000); }
+  }
+
+  /* ---- Team page (master admin) ---- */
+  async function cloudSaveMember(id) {
+    const name = $('#m-name').value.replace(/\s+/g, ' ').trim();
+    const email = T.normEmail($('#m-email').value);
+    const title = $('#m-desig').value.replace(/\s+/g, ' ').trim();
+    if (!name) { $('#m-name').classList.add('invalid'); return; }
+    if (!T.validEmail(email)) { $('#m-email').classList.add('invalid'); toast('Check the email', 'Use the full CRDB email address.', 'err'); return; }
+    const btn = $('#modal-root [data-action="team-save"]'); if (btn) btn.disabled = true;
+    try {
+      const out = await api('saveMember', { member: { id: id || '', name, email, title, canInitiate: $('#m-ini').checked, canAuthorize: $('#m-aut').checked } });
+      closeModal(); refreshTeam(out.team);
+      toast(id ? 'Member updated' : 'Member added', id ? name : `${name} gets an email with the link to create a password.`);
+    } catch (e) { if (btn) btn.disabled = false; toast('Not saved', e.message, 'err'); }
+  }
+  async function cloudResetPassword(el) {
+    if (el.dataset.confirm !== 'yes') { el.dataset.confirm = 'yes'; el.innerHTML = `${icon('alert', 'sm')}Click again to reset`; return; }
+    el.disabled = true;
+    try {
+      const u = state.team.find((x) => x.id === el.dataset.id);
+      refreshTeam((await api('resetPassword', { id: el.dataset.id })).team);
+      toast('Password reset', `${u ? u.name.split(/\s+/)[0] : 'They'} get an email and create a new password with a PIN.`);
+    } catch (e) { el.disabled = false; toast('Not reset', e.message, 'err'); }
+  }
+  async function cloudToggleMember(id, el) {
+    if (el) el.disabled = true;
+    try {
+      refreshTeam((await api('toggleMember', { id })).team);
+      const u = state.team.find((x) => x.id === id);
+      if (u) toast(u.active ? 'Member reactivated' : 'Member deactivated', u.active ? `${u.name} can sign in again.` : `${u.name} can no longer sign in or sign memos.`);
+    } catch (e) { if (el) el.disabled = false; toast('Not changed', e.message, 'err'); }
+  }
+  async function cloudSaveMyPassword() {
+    const u = state.user; if (!u) return;
+    const cur = $('#mp-current').value, a = $('#mp-new').value, b = $('#mp-confirm').value;
+    const prob = T.passwordProblem(a); if (prob) { $('#mp-new').classList.add('invalid'); toast('Choose a stronger password', prob, 'err'); return; }
+    if (a !== b) { $('#mp-confirm').classList.add('invalid'); toast('The passwords do not match', '', 'err'); return; }
+    const btn = $('#modal-root [data-action="save-my-password"]'); if (btn) btn.disabled = true;
+    try {
+      const salt = T.randomHex(16);
+      const out = await api('changePassword', { oldProof: await stretch(cur, u.salt || store.get('salt:' + u.email, '')), salt, proof: await stretch(a, salt) });
+      u.salt = out.salt || salt; store.set('salt:' + u.email, u.salt);
+      closeModal(); toast('Password changed', 'Use it the next time you sign in.');
+    } catch (e) {
+      if (btn) btn.disabled = false;
+      if (/current password/i.test(e.message)) $('#mp-current').classList.add('invalid');
+      toast('Password not changed', e.message, 'err');
+    }
+  }
+
+  /* ================================================================ */
   /* Events                                                           */
   /* ================================================================ */
   function gotoLine(n) {
@@ -5138,20 +5403,31 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     'save-dir': (el) => isAdmin() && saveDir(el.dataset.id || null),
     'delete-dir': (el) => isAdmin() && deleteDir(el.dataset.id, el),
     'export-dir': async () => { try { saveBlob(await X.buildDirectoryWorkbook(state.directory, state.user), `DSE Broker Directory ${E.today().file}.xlsx`); toast('Directory exported', plural(state.directory.length, 'participant')); } catch (err) { toast('Export failed', err.message, 'err'); } },
-    'open-history': (el) => {
+    'open-history': async (el) => {
       const h = state.history.find((x) => x.id === el.dataset.id); if (!h) return;
+      if (CLOUD && h.raw === undefined) {
+        try { const out = await api('getHistory', { id: h.id }); if (out.record) Object.assign(h, out.record); }
+        catch (e) { toast('Could not open the batch', e.message, 'err'); return; }
+      }
       state.decisions = clone(h.decisions || {});
       state.sessionBatchKeys.add(h.key);
       show('desk'); setRaw(h.raw || '', 'Batch re-opened from History');
     },
-    'delete-history': (el) => { if (!isAdmin()) return; state.history = state.history.filter((x) => x.id !== el.dataset.id); saveHistory(); renderHistory(); renderNav(); },
-    'clear-history': (el) => {
+    'delete-history': async (el) => {
+      if (!isAdmin()) return;
+      if (CLOUD) {
+        try { state.history = (await api('deleteHistory', { id: el.dataset.id })).history || []; } catch (e) { toast('Not removed', e.message, 'err'); return; }
+      } else { state.history = state.history.filter((x) => x.id !== el.dataset.id); saveHistory(); }
+      renderHistory(); renderNav();
+    },
+    'clear-history': async (el) => {
       if (!isAdmin()) return;
       if (el.dataset.confirm !== 'yes') { el.dataset.confirm = 'yes'; el.innerHTML = `${icon('alert', 'sm')}Click again to clear`; return; }
+      if (CLOUD) { try { await api('clearHistory'); } catch (e) { toast('Not cleared', e.message, 'err'); return; } }
       state.history = []; saveHistory(); renderHistory(); renderNav(); toast('History cleared', 'Duplicate protection starts afresh.');
     },
     'export-backup': () => exportBackup(),
-    'import-backup': () => $('#import-input').click(),
+    'import-backup': () => !CLOUD && $('#import-input').click(),
     'upload-logo': () => $('#logo-input').click(),
     'open-team-file': () => { const i = $('#team-input'); if (i) { i.value = ''; i.click(); } },
     'reset-logo': () => { state.settings.letterhead.logo = null; saveSettings(); renderSettings(); toast('Built-in logo restored', ''); },
@@ -5161,7 +5437,14 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     },
     'sign-out': () => signOut(),
     'toggle-pw': (el) => { const i = document.getElementById(el.dataset.for); if (i) { i.type = i.type === 'password' ? 'text' : 'password'; el.classList.toggle('on', i.type === 'text'); } },
-    forgot: () => renderRecover(),
+    forgot: () => (CLOUD ? renderPinStart('reset', ($('#li-email') || {}).value) : renderRecover()),
+    'cloud-create': () => renderPinStart('create', ($('#li-email') || {}).value),
+    'pin-resend': async (el) => {
+      el.disabled = true;
+      try { await api('pinRequest', { email: el.dataset.email }); toast('New PIN sent', 'Use the newest email. Earlier PINs no longer work.'); }
+      catch (e) { showAuthError(e.message); }
+      setTimeout(() => { el.disabled = false; }, 4000);
+    },
     'back-login': () => renderLogin(),
     'copy-text': (el) => copyText(el.dataset.text, el),
     'download-recovery': () => saveBlob(new Blob([`CRDB DSE Settlement Engine — master admin recovery key\r\n\r\n${state.pendingRecovery || ''}\r\n\r\nKeep this key private. It resets the master admin password.\r\n`], { type: 'text/plain' }), 'DSE Engine recovery key.txt'),
@@ -5169,14 +5452,14 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     'team-add': () => isAdmin() && openMemberEdit(null),
     'team-edit': (el) => isAdmin() && openMemberEdit(el.dataset.id),
     'team-save': (el) => isAdmin() && saveMember(el.dataset.id || null),
-    'team-temp': (el) => isAdmin() && setTempPassword(el.dataset.id),
-    'team-toggle': (el) => isAdmin() && toggleMember(el.dataset.id),
+    'team-temp': (el) => isAdmin() && (CLOUD ? cloudResetPassword(el) : setTempPassword(el.dataset.id)),
+    'team-toggle': (el) => isAdmin() && toggleMember(el.dataset.id, el),
     'team-publish': () => isAdmin() && publishEngine(),
     'my-password': () => openMyPassword(),
     'save-my-password': () => saveMyPassword(),
     'new-recovery': () => isAdmin() && newRecoveryKey(),
     'reset-directory': (el) => {
-      if (!isAdmin()) return;
+      if (!isAdmin() || CLOUD) return;
       if (el.dataset.confirm !== 'yes') { el.dataset.confirm = 'yes'; el.textContent = 'Click again — learned entries will be lost'; return; }
       const keep = PUBLIC ? state.directory.filter((d) => d.type === 'control') : [];
       state.directory = seedDirectory().concat(keep); saveDirectory(); renderSettings(); renderNav(); runEngine();
@@ -5219,6 +5502,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       else if (f.id === 'setup-form') doSetup();
       else if (f.id === 'change-form') doChangePassword();
       else if (f.id === 'recover-form') doRecover();
+      else if (f.id === 'pin-start-form') doPinStart();
+      else if (f.id === 'pin-code-form') doPinCode();
+      else if (f.id === 'new-pw-form') doNewPassword();
     });
     document.addEventListener('input', (e) => {
       if (e.target.id === 'rk-saved') { const b = $('[data-action="finish-setup"]'); if (b) b.disabled = !e.target.checked; }
@@ -5244,7 +5530,15 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   /* ================================================================ */
   function init() {
     if (ASSETS.markWhite) $('#brand-mark').src = ASSETS.markWhite;
-    if (PUBLIC) { const b = $('.sidebar .secure b'); if (b) b.textContent = 'Private to this browser'; }
+    const note = $('.sidebar .secure div');
+    if (note && CLOUD) note.innerHTML = '<b>Shared securely</b>Team, rules, directory and batch history are kept in the Capital Markets data sheet. Memos are made in this browser.';
+    else if (note && PUBLIC) note.querySelector('b').textContent = 'Private to this browser';
+    if (CLOUD) {
+      bindGlobal(); bindIdle();
+      window.addEventListener('focus', () => { if (Date.now() - cloud.lastSync > 180000) cloudRefresh(); });
+      cloudBoot();
+      return;
+    }
     applyTeamPackage();
     // migrate: make sure a control account exists (the website edition gets it from the team file)
     const ctrl = seedDirectory().find((d) => d.type === 'control');
