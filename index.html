@@ -277,22 +277,22 @@
    Every value must come from a Bank of Tanzania (or NBS) publication.
    ════════════════════════════════════════════════════════════════════ */
 const DATA = { /* INJECT-DATA */
-  asOf: "2026-11-04",
-  updateLine: "Auto-refreshed from BOT releases · last built 4 Nov 2026",
+  asOf: "2026-11-11",
+  updateLine: "Auto-refreshed from BOT releases · last built 11 Nov 2026",
   tape: [
     {label:"CBR", value:"6.25%", dir:"fl"},
     {label:"REDISCOUNT", value:"8.75%", dir:"fl"},
-    {label:"INFLATION SEP", value:"4.3%", dir:"fl"},
+    {label:"INFLATION OCT", value:"4.2%", dir:"dn"},
     {label:"GDP 2025", value:"5.9%", dir:"up"},
     {label:"364-DAY BILL", value:"6.134%", dir:"dn"},
     {label:"182-DAY BILL", value:"5.571%", dir:"dn"},
     {label:"2Y BOND", value:"8.092%", dir:"dn"},
     {label:"5Y BOND", value:"9.528%", dir:"dn"},
-    {label:"10Y BOND", value:"10.692%", dir:"dn"},
+    {label:"10Y BOND", value:"10.141%", dir:"dn"},
     {label:"15Y BOND", value:"10.791%", dir:"up"},
     {label:"20Y BOND", value:"10.521%", dir:"dn"},
     {label:"25Y BOND", value:"10.842%", dir:"dn"},
-    {label:"TZS/USD", value:"2,653.51", dir:"up"},
+    {label:"TZS/USD", value:"2,656.67", dir:"up"},
     {label:"IBCM RATE", value:"6.67%", dir:"fl"}
   ],
   sources: [
@@ -303,7 +303,7 @@ const DATA = { /* INJECT-DATA */
     {name:"Treasury bond auction results", url:"https://www.bot.go.tz/TBonds"},
     {name:"Issuance calendar, Q2 FY2026/27", url:"https://www.bot.go.tz/webdocs/SiteDocuments/en/2026092309332583.pdf"},
     {name:"MPC meetings calendar 2026/27", url:"https://www.bot.go.tz/webdocs/Other/MPC_Calendar.pdf"},
-    {name:"NBS CPI release, September 2026", url:"https://www.nbs.go.tz/uploads/statistics/documents/en-1791475662-CPI%20%20Release_092026_English.pdf"},
+    {name:"NBS CPI release, October 2026", url:"https://www.nbs.go.tz/uploads/statistics/documents/en-1794230225-CPI%20%20Release%20October%202026%20English.pdf"},
     {name:"NBS GDP highlights, Q2 2026", url:"https://www.nbs.go.tz/uploads/statistics/documents/en-1792576131-Highlights%20on%20the%20Second%20Quarter%20Mainland%20Tanzania%20GDP%202026.pdf"}
   ],
   cbrHistory: [
@@ -330,7 +330,8 @@ const DATA = { /* INJECT-DATA */
     {t:"2026-05",v:4.2},{t:"2026-06",v:4.0,note:"Government fuel subsidy in May–June softened the climb"},
     {t:"2026-07",v:4.2,note:"Core 3.9%, food 4.1%"},
     {t:"2026-08",v:4.3,note:"Core 4.1%, food 3.7%"},
-    {t:"2026-09",v:4.3,note:"Latest reading; flat vs August; core 4.1%, food 3.9%"}
+    {t:"2026-09",v:4.3,note:"Flat vs August; core 4.1%, food 3.9%"},
+    {t:"2026-10",v:4.2,note:"Latest reading; first easing since the spring climb; core 4.0%, food 3.6%"}
   ],
   gdpAnnual: [
     {t:"2019-12-31",v:6.9,note:"Pre-pandemic pace (older 2015-base series)"},
@@ -344,9 +345,9 @@ const DATA = { /* INJECT-DATA */
   yieldCurve: [
     {t:2, v:8.0919, note:"Auction No. 712 re-opening, 4 Nov 2026 · 9.50% coupon · bids 2.9× the offer"},
     {t:5, v:9.5275, note:"Auction No. 700 re-opening, 16 Sep 2026 · 10.25% coupon · bids 2.8× the offer"},
-    {t:10, v:10.6924, note:"Auction No. 711 re-opening, 2 Sep 2026 · 11.25% coupon · bids 2.5×"},
+    {t:10, v:10.1406, note:"Auction No. 699 3rd sale, 11 Nov 2026 · 10.50% coupon · bids 3.3× the offer — a return to the cheaper coupon line pulled this tenor back below the 20-year"},
     {t:15, v:10.7907, note:"Auction No. 696 3rd sale, 30 Sep 2026 · 12.25% coupon · bids 2.6× the offer — now prices above the 10-year, a normal upward-sloping curve"},
-    {t:20, v:10.5214, note:"Auction No. 710 re-opening, 28 Oct 2026 · 12.25% coupon · bids 2.9× the offer — fell from 11.33% in July, now below the 10- and 15-year"},
+    {t:20, v:10.5214, note:"Auction No. 710 re-opening, 28 Oct 2026 · 12.25% coupon · bids 2.9× the offer — fell from 11.33% in July"},
     {t:25, v:10.8422, note:"Auction No. 722, 15 Oct 2026 · 12.75% coupon, new issue · bids 7.4× the offer — now the highest-yielding tenor on the curve"}
   ],
   tenors: [
@@ -373,8 +374,8 @@ const DATA = { /* INJECT-DATA */
       {t:"2026-04-29",v:9.5385,note:"Auction 700 · 10.25% coupon"},
       {t:"2026-09-16",v:9.5275,note:"Auction 700 re-opening · 10.25% coupon · bids 2.8× the offer"}
      ]},
-    {y:10, name:"10-Year", coupon:"11.25%", way:10.6924, wap:"103.3267", date:"2026-09-02", auc:"No. 711 re-opening", bid:"2.5×", prev:"10.8747% · 22 Jul 2026", isin:"TZ1996106112",
-     note:"The 10-year eased to 10.69% at the 2 September re-opening of the same 11.25% line — a partial retracement from July's 10.87%, though still well above April's 9.40% cycle low. Bids covered the offer 2.5×.",
+    {y:10, name:"10-Year", coupon:"10.50%", way:10.1406, wap:"102.1326", date:"2026-11-11", auc:"No. 699 3rd sale", bid:"3.3×", prev:"10.6924% · 2 Sep 2026", isin:"TZ1996105957",
+     note:"The 11 November auction returned to the 10.50% coupon line (Auction 699, last sold back in June) for its third sale, pulling the 10-year yield sharply lower to 10.14% from 10.69% in September — the cheapest print on this tenor since April's 9.40% cycle low. Bids covered the TZS 173.76bn competitive offer 3.3×.",
      hist:[
       {t:"2025-01-22",v:14.0846,note:"Auction 667 · 14% coupon"},
       {t:"2025-04-30",v:14.2594,note:"Auction 667 re-opening · 14% coupon"},
@@ -384,7 +385,8 @@ const DATA = { /* INJECT-DATA */
       {t:"2026-04-15",v:9.3962,note:"Auction 699 · 10.5% coupon — the cycle low"},
       {t:"2026-06-10",v:10.3913,note:"Auction 699 re-opening · 10.5% coupon"},
       {t:"2026-07-22",v:10.8747,note:"Auction 711 · 11.25% coupon"},
-      {t:"2026-09-02",v:10.6924,note:"Auction 711 re-opening · 11.25% coupon · bids 2.5×"}
+      {t:"2026-09-02",v:10.6924,note:"Auction 711 re-opening · 11.25% coupon · bids 2.5×"},
+      {t:"2026-11-11",v:10.1406,note:"Auction 699 3rd sale · 10.5% coupon · bids 3.3× the offer"}
      ]},
     {y:15, name:"15-Year", coupon:"12.25%", way:10.7907, wap:"110.5120", date:"2026-09-30", auc:"No. 696 3rd sale", bid:"2.6×", prev:"10.5515% · 19 Aug 2026", isin:"TZ1996105924",
      note:"The 30 September re-opening of the same 12.25% line priced at 10.79% — up from 10.55% in August, and for the first time this cycle the 15-year now yields more than the 10-year (10.69%), restoring a normal upward-sloping curve. Bids covered the offer 2.6×, down from 4.1× in August. Investors still paid a premium price (110.51 per 100) for the rich coupon.",
@@ -474,7 +476,7 @@ const DATA = { /* INJECT-DATA */
     {t:"2025-12",v:2447.5},{t:"2026-01",v:2518.1},{t:"2026-02",v:2542.5},
     {t:"2026-03",v:2577.4},{t:"2026-04",v:2602},{t:"2026-05",v:2609.2},
     {t:"2026-06",v:2623.5},{t:"2026-07",v:2649.7},
-    {t:"2026-11-04",v:2653.51,note:"Latest BOT indicative selling rate (buying 2,627.24)"}
+    {t:"2026-11-11",v:2656.67,note:"Latest BOT indicative selling rate (buying 2,630.37)"}
   ],
   calendar: [
     {date:"2026-11-04", what:"Treasury bond auction", m:"2-Year — re-opening"},
@@ -839,18 +841,18 @@ function buildEconomy(){
   secHead(sec,"Economy","Growth and prices",
     'Two numbers drive everything else on this page: <b>inflation</b> (how fast prices rise) and <b>GDP growth</b> (how fast the economy expands). Policy tries to keep the first inside 3–5% without choking the second.');
   const g=el("div","grid c4"); sec.append(g);
-  tile(g,{label:"Headline inflation", value:"4.3", unit:"% y/y", delta:"flat", dir:"fl",
-    sub:"September 2026 · NBS release, 8 Oct",
-    plain:"A typical basket of goods costs 4.3% more than a year ago — unchanged from August, the second month in a row at that rate, and still inside the 3–5% target band.",
-    econ:"Moderate and predictable inflation preserves buying power; it is the earlier climb from 3.2% in March that pushed the MPC to hike in July, and the plateau since is part of why it held in October.",
-    mkt:"Inflation is the floor under yields: a 364-day bill at 6.13% pays roughly 1.8% after inflation. A steady rate removes one reason for yields to move either way.",
+  tile(g,{label:"Headline inflation", value:"4.2", unit:"% y/y", delta:"-10 bps", dir:"dn",
+    sub:"October 2026 · NBS release, 9 Nov",
+    plain:"A typical basket of goods costs 4.2% more than a year ago — a tick down from 4.3% in September, the first easing since the spring climb to 4%, and still inside the 3–5% target band.",
+    econ:"The modest easing suggests the restrictive stance is starting to cool price growth, reinforcing the MPC's October judgement that the current stance is working — without yet signalling room to loosen.",
+    mkt:"A lower headline print trims some of the upward pressure on yields that had built since July; steady-to-easing inflation supports yields staying anchored into January's MPC meeting.",
     learnQ:"Headline vs core — what's the difference?",
-    learnA:"Headline counts everything in the basket. Core (4.1%) strips out unprocessed food, energy and utilities — the volatile items — so it shows the underlying trend. When core rises too, the pressure is broad, not just a food-price blip."});
-  tile(g,{label:"Core inflation", value:"4.1", unit:"% y/y", delta:"flat", dir:"fl",
-    sub:"September 2026 · 73.9% of the basket",
-    plain:"Underlying inflation without volatile food and energy — held flat at 4.1% for a second month, even as food inflation ticked up to 3.9% from 3.7%, which tells the MPC the broader pressure has stabilised for now.",
-    econ:"A steady core, rather than a broadening one, is part of why the MPC judged the restrictive stance to already be working.",
-    mkt:"Core drives policy more than headline — its plateau supports the case for holding rates rather than hiking further."});
+    learnA:"Headline counts everything in the basket. Core (4.0%) strips out unprocessed food, energy and utilities — the volatile items — so it shows the underlying trend. When core rises too, the pressure is broad, not just a food-price blip."});
+  tile(g,{label:"Core inflation", value:"4.0", unit:"% y/y", delta:"-10 bps", dir:"dn",
+    sub:"October 2026 · 73.9% of the basket",
+    plain:"Underlying inflation eased to 4.0% from 4.1% in September, even as food inflation also cooled to 3.6% from 3.9% — a broad-based easing rather than a single-category blip.",
+    econ:"A cooling core alongside softer food prices gives the MPC more comfort with October's hold and reduces the odds of a further hike at the January review.",
+    mkt:"Core easing in step with headline supports the case for stable-to-lower yields at upcoming auctions."});
   tile(g,{label:"GDP growth 2025", value:"5.9", unit:"%", delta:"vs 5.6% in 2024", dir:"up",
     sub:"Provisional · BOT projects 6.3% for 2026",
     plain:"The economy grew 5.9% in 2025, led by agriculture, finance, transport, mining and construction.",
@@ -876,7 +878,7 @@ function buildBonds(){
   secHead(sec,"Bonds & Yields","The government yield curve",
     'Treasury bonds are how the government borrows for the long haul — 2 to 25 years. The <b>weighted average yield (WAY)</b> from each auction is the market’s honest price for lending to the government at that tenor. Yields have fallen a long way from the 15%+ era of late 2024 — a curve-wide rally that repriced everything — with a modest back-up since the July 2026 CBR hike.');
   chartCard(sec,{title:"Yield curve — latest auction yield per tenor",
-    note:"Each dot is that tenor's most recent auction. The 20-year dropped further still, to 10.52% at its 28 October re-opening — now the lowest point among the 10-, 15-, 20- and 25-year bonds — while the 25-year (10.84%) is the highest-yielding tenor on the curve. The long end now has a dip rather than a smooth upward slope.",
+    note:"Each dot is that tenor's most recent auction. The 10-year fell sharply to 10.14% at its 11 November auction — a return to the cheaper 10.50% coupon line — making it the lowest-yielding bond beyond the 5-year, below even the 20-year (10.52%). The 25-year (10.84%) remains the highest-yielding tenor on the curve, and the long end still has a dip rather than a smooth upward slope.",
     series:[{name:"Latest WAY", color:"var(--s1)", points:DATA.yieldCurve}],
     unit:"%", yFmtDp:2, xKind:"linear", markAll:true, wash:false, xFmt:v=>v+"y", xName:"Tenor", aria:"Government bond yield curve by tenor"});
   const card=el("div","chart-card");
@@ -992,9 +994,9 @@ function buildMarket(){
   secHead(sec,"Market Snapshot","The wider picture",
     'The backdrop every yield trades against: the shilling, the country’s FX buffers, and how fast money and credit are growing.');
   const g=el("div","grid c3"); sec.append(g);
-  tile(g,{label:"TZS / USD", value:"2,653.51", unit:"TZS", delta:"weaker y/y", dir:"up",
-    sub:"BOT selling rate · 4 Nov 2026 (buying 2,627.24)",
-    plain:"It takes 2,653.51 shillings to buy a dollar — about 9% more than a year ago. On this chart, up = weaker shilling.",
+  tile(g,{label:"TZS / USD", value:"2,656.67", unit:"TZS", delta:"weaker y/y", dir:"up",
+    sub:"BOT selling rate · 11 Nov 2026 (buying 2,630.37)",
+    plain:"It takes 2,656.67 shillings to buy a dollar — about 9% more than a year ago. On this chart, up = weaker shilling.",
     econ:"A weaker shilling makes imports (fuel, fertiliser) pricier — one of the channels behind the inflation climb.",
     mkt:"FX weakness pressures BOT to keep policy tight, which supports higher yields."});
   tile(g,{label:"FX reserves", value:"6.03", unit:"USD bn", delta:"4.3 months cover", dir:"up",
