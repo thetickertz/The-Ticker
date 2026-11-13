@@ -214,6 +214,16 @@ svg.i.lg { width: 22px; height: 22px; }
 .user .role svg { width: 12px; height: 12px; stroke-width: 2.2; color: #7fd3a1; }
 .user .signout { width: 32px; height: 32px; color: rgba(233, 243, 237, .72); }
 .user .signout:hover { background: rgba(255, 255, 255, .1); color: #fff; }
+/* "Powered by The Ticker" (website only): the Ticker wordmark with its green up and red down triangles */
+.powered { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: -2px; padding: 2px 0; font-size: 10.5px; letter-spacing: .03em;
+  color: rgba(233, 243, 237, .45); text-decoration: none; transition: color .2s; }
+.powered[hidden] { display: none; }
+.powered:hover { color: rgba(233, 243, 237, .75); }
+.powered .pw-mark { display: inline-flex; align-items: baseline; gap: 4px; color: rgba(255, 255, 255, .85); }
+.powered .pw-the { font-size: 9.5px; font-weight: 500; letter-spacing: .18em; }
+.powered b { font-size: 12.5px; font-weight: 800; letter-spacing: -.02em; }
+.powered .pw-tris { width: 19px; height: 10px; margin-left: -1px; flex: none; }
+.powered:hover .pw-mark { color: #fff; }
 .avatar { --av-h: 150; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; flex: none; font: 700 12.5px/1 var(--font); letter-spacing: .02em;
   background: hsl(var(--av-h) 52% 89%); color: hsl(var(--av-h) 48% 25%); }
 .avatar.md { width: 32px; height: 32px; font-size: 11.5px; }
@@ -502,7 +512,7 @@ textarea.input { height: auto; min-height: 76px; padding: 10px 12px; line-height
 .doc .memo-line b { font-size: 13px; font-weight: 700; }
 .doc .memo-line .ml-sub { font-size: 12px; color: var(--ink-500); font-variant-numeric: tabular-nums; }
 .doc .doc-foot { margin-top: auto; padding-top: 14px; display: flex; gap: 8px; flex-wrap: wrap; }
-.doc .doc-foot .btn { flex: 1; }
+.doc .doc-foot .btn { flex: 1 1 150px; white-space: nowrap; }   /* one button per memo; they stack when the card is narrow */
 .doc.empty { opacity: .72; }
 .doc .empty-note { margin-top: 14px; padding: 14px; border-radius: 12px; background: var(--surface-2); border: 1px dashed var(--line-strong); font-size: 12.5px; color: var(--ink-500); text-align: center; }
 .blocked-note { display: flex; gap: 8px; align-items: flex-start; margin-top: 12px; padding: 10px 12px; border-radius: 10px; font-size: 12.3px; background: var(--warn-bg); color: var(--warn); }
@@ -693,7 +703,7 @@ details.log[open] summary .chev { transform: rotate(180deg); }
   .sidebar { padding: 18px 10px; align-items: center; }
   .sb-brand { padding: 0 0 14px; }
   .sb-brand img { width: 56px; }
-  .sb-brand .tagline, .product, .nav-item span, .nav-item .count, .nav-label, .secure, .user .who-wrap, .sidebar::after { display: none; }
+  .sb-brand .tagline, .product, .nav-item span, .nav-item .count, .nav-label, .secure, .user .who-wrap, .sidebar::after, .powered .pw-by, .powered .pw-mark { display: none; }
   .user { flex-direction: column; padding: 8px 4px; }
   .nav-item { justify-content: center; padding: 11px; }
   .nav-item.active::before { left: -10px; }
@@ -994,6 +1004,11 @@ details.log[open] summary .chev { transform: rotate(180deg); }
         <div><b>Runs offline on this PC</b>SWIFT data, accounts and documents never leave this computer.</div>
       </div>
       <div class="user" id="user"></div>
+      <a class="powered" id="powered" href="https://thetickertz.github.io/The-Ticker/" target="_blank" rel="noopener" title="Powered by The Ticker" hidden>
+        <span class="pw-by">Powered by</span>
+        <span class="pw-mark"><span class="pw-the">The</span><b>ticker</b></span>
+        <svg class="pw-tris" viewBox="0 0 24 12" aria-hidden="true"><path d="M5.5 1.6 L10 9.6 H1 Z" fill="#1fbf75" stroke="#1fbf75" stroke-width="1.6" stroke-linejoin="round"/><path d="M18.5 9 L14 1 H23 Z" fill="#e8453c" stroke="#e8453c" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      </a>
     </div>
   </aside>
 
@@ -3181,6 +3196,15 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   }
   const getPath = (o, p) => p.split('.').reduce((a, k) => (a == null ? a : a[k]), o);
   function setPath(o, p, v) { const ks = p.split('.'); let a = o; ks.slice(0, -1).forEach((k) => { a = a[k] = a[k] || {}; }); a[ks[ks.length - 1]] = v; }
+  /** Put the cursor in a field shortly after a screen or dialog opens, unless someone is already typing in another field. */
+  function focusSoon(el, ms) {
+    if (!el) return;
+    setTimeout(() => {
+      const a = document.activeElement;
+      const typing = a && a !== el && a !== document.body && a.matches && a.matches('input, textarea, select') && a.dataset.autofocused !== '1';
+      if (el.isConnected && !typing) { el.focus(); el.dataset.autofocused = '1'; }
+    }, ms);
+  }
   const fmtWhen = (iso) => { try { return new Date(iso).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch (e) { return iso; } };
 
   /* ================================================================ */
@@ -3520,7 +3544,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     if (sub) $('#m-sub').textContent = sub;
     state.modalClose = onClose || null;
     const first = $('#modal-root .modal-body input, #modal-root .modal-body select, #modal-root .modal-body textarea');
-    if (first) setTimeout(() => first.focus(), 30);
+    focusSoon(first, 30);
     if (onOpen) onOpen();
   }
   function closeModal() {
@@ -3830,11 +3854,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   }
 
   function memoLine(m) {
-    const can = m.ready && signerPair().ok;
     return `<div class="memo-line"><div><b>${esc(m.label)}</b> <span class="chip outline">${esc(m.seqType)}</span>${m.ready ? '' : ` <span class="chip amber">${icon('alert')}Needs you</span>`}
         <div class="ml-sub">Dr ${fmt(m.totalDr)} · commission ${fmt(m.commissionTotal)}</div></div>
-      <div class="btn-row"><button class="btn sm ghost" data-action="preview" data-keys="${esc(m.key)}">${icon('eye', 'sm')}Preview</button>
-        <button class="btn sm soft" data-action="pdf" data-keys="${esc(m.key)}" ${can ? '' : 'disabled'}>${icon('download', 'sm')}PDF</button></div></div>`;
+      <div class="btn-row"><button class="btn sm ghost" data-action="preview" data-keys="${esc(m.key)}">${icon('eye', 'sm')}Preview</button></div></div>`;
   }
 
   function signersHtml() {
@@ -3864,16 +3886,16 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       return `<div class="card doc empty"><div class="doc-top"><div class="doc-ic ${kind === 'BOND' ? 'bond' : ''}">${icon(icn, 'lg')}</div><div><h4>${title}</h4><div class="doc-sub">No ${kind.toLowerCase()} instruction in this paste</div></div></div>
         <div class="empty-note">Paste the ${kind.toLowerCase()} MT298 message too — it can go in the same box.</div></div>`;
     }
-    const ready = memos.every((m) => m.ready) && signerPair().ok;
-    const keys = memos.map((m) => m.key).join(',');
+    const signed = signerPair().ok;
     const total = memos.reduce((a, m) => a + m.totalDr, 0n);
     const blockers = [...new Set(memos.flatMap((m) => m.blockers))];
-    const name = memos.length > 1 ? `Download all ${memos.length} memos · one PDF` : `Download ${memos[0].label} PDF`;
+    // Every memo is its own PDF (EQUITY A, EQUITY B, BOND …), downloaded with its own button.
+    const buttons = memos.map((m) => `<button class="btn primary" data-action="pdf" data-keys="${esc(m.key)}" ${m.ready && signed ? '' : 'disabled'}>${icon('download', 'sm')}Download ${esc(m.label)}</button>`).join('');
     return `<div class="card doc"><div class="doc-top"><div class="doc-ic ${kind === 'BOND' ? 'bond' : ''}">${icon(icn, 'lg')}</div>
         <div><h4>${title}</h4><div class="doc-sub">${plural(memos.length, 'memo')} · TZS ${fmt(total)}</div></div></div>
       <div class="memo-list">${memos.map(memoLine).join('')}</div>
       ${blockers.length ? `<div class="blocked-note">${icon('lock', 'sm')}<span>${esc(blockers.join(' '))}</span></div>` : ''}
-      <div class="doc-foot"><button class="btn primary" data-action="pdf" data-keys="${esc(keys)}" ${ready ? '' : 'disabled'}>${icon('pdf', 'sm')}${esc(name)}</button></div></div>`;
+      <div class="doc-foot">${buttons}</div></div>`;
   }
 
   function docsHtml(r) {
@@ -4705,7 +4727,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     </div>`;
     startClock();
     const first = root.querySelector('input:not([readonly])');
-    if (first) setTimeout(() => first.focus(), 60);
+    focusSoon(first, 60);
   }
   const pwField = (id, label, auto, hint) => `<div class="field"><label for="${id}">${label}</label><div class="pw-wrap"><input class="input lg" id="${id}" type="password" autocomplete="${auto}"><button type="button" class="pw-eye" data-action="toggle-pw" data-for="${id}" aria-label="Show or hide password">${icon('eye', 'sm')}</button></div>${hint ? `<div class="hint">${hint}</div>` : ''}</div>`;
   // Floating-label fields for the front screens.
@@ -4737,7 +4759,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         ${authErrorBox()}
         <button class="lux-btn" type="submit"><span>Sign in</span>${icon('arrowRight', 'sm')}</button>
       </form>`);
-    if (email) setTimeout(() => { const pw = $('#li-pw'); if (pw) pw.focus(); }, 80);
+    if (email) focusSoon($('#li-pw'), 80);
   }
 
   async function doLogin() {
@@ -5530,6 +5552,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   /* ================================================================ */
   function init() {
     if (ASSETS.markWhite) $('#brand-mark').src = ASSETS.markWhite;
+    if (PUBLIC) { const pw = $('#powered'); if (pw) pw.hidden = false; }   // the website is hosted by The Ticker
     const note = $('.sidebar .secure div');
     if (note && CLOUD) note.innerHTML = '<b>Shared securely</b>Team, rules, directory and batch history are kept in the Capital Markets data sheet. Memos are made in this browser.';
     else if (note && PUBLIC) note.querySelector('b').textContent = 'Private to this browser';
